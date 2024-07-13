@@ -5,4 +5,4 @@ FreeEnt/__pycache__/*
 FreeEnt/server/__pycache__/*
 **/.smc*
 **.smc*
-.lastseed
+.DS_Store
