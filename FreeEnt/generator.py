@@ -714,7 +714,7 @@ def build(romfile, options, force_recompile=False):
     if not options.hide_flags:
         env.add_substitution('flags hidden', '')
 
-    #update_spells.apply(env)
+    update_spells.apply(env)
 
     # must be last
     wacky_rando.apply(env)
