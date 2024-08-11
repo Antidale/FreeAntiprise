@@ -5,3 +5,4 @@ FreeEnt/__pycache__/*
 FreeEnt/server/__pycache__/*
 **/.smc*
 **.smc*
+FreeEnt/server/bin/*
