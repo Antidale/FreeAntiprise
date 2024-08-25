@@ -6,3 +6,4 @@ FreeEnt/server/__pycache__/*
 **/.smc*
 **.smc*
 FreeEnt/server/bin/*
+.DS_Store
