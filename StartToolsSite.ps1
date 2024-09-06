@@ -1,2 +1,8 @@
-if ((Test-Path env:VIRTUAL_ENV) -eq $false) { .\ENV\Scripts\Activate.ps1 }
-python .\fetools\tool_site.py .\ff4.rom.smc
+if ((Test-Path env:VIRTUAL_ENV) -eq $false) { 
+    if ((Test-Path ./Env/Scripts) -eq $false) {
+        ./ENV/binactivate
+    }
+
+    ./ENV/Scripts/Activate.ps1 
+}
+python ./fetools/tool_site.py ./ff4.rom.smc
