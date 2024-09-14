@@ -1,6 +1,6 @@
 if ((Test-Path env:VIRTUAL_ENV) -eq $false) { 
     if ((Test-Path ./Env/Scripts) -eq $false) {
-        ./ENV/binactivate
+        ./ENV/bin/activate
     }
 
     ./ENV/Scripts/Activate.ps1 
