@@ -42,6 +42,8 @@ From the repo root directory: `python -m FreeEnt <rompath> server --local`
 
 Then navigate in a browser to `localhost:8080`.
 
+To help forks provide their own in-depth documentation, there is a new `/fork_info` page added to `website.py`. There is also support for adding arbitrary html or markdown files and linking to them from anywhere on the site using either the `page_name` or `md_file` query parameters added to `/fork_info`. `version.py` has also been extended with a `FORK_SOURCE_URL` property, which will be used to provide a link to your fork's repository on the base `/fork_info` page. Documentation for the markdown option is provided in `FreeEnt/server/markdown/_example.md`. When running the site with the `--local` parameter, you can view the markdown example at `/markdown_test`, and any of your markdown files at `/markdown_test?md_file=your_file_name`. 
+
 ### Tools site
 
 From the `fetools` directory: `python tool_site.py <rompath>`
