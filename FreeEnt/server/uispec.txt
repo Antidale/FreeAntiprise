@@ -248,6 +248,8 @@
 ..[ECHO:Tstandard]
 .(Twildish) Wild-ish chest randomization
 ..[ECHO:Tstandard]
+.(Tstandardish) Standard-ish chest randomization
+..[ECHO:Tstandard]
 .(Tempty)! Chests are empty
 [Tno:j] No J-items in chests
 <> Junk management
