@@ -834,6 +834,7 @@ const _FE_FLAGSPEC = {
         "Tpro",
         "Twild",
         "Twildish",
+        "Tstandardish",
         "Tempty",
         "Tsparse:10",
         "Tsparse:20",
@@ -1818,6 +1819,7 @@ const _FE_FLAGSPEC = {
             "Tpro",
             "Twild",
             "Twildish",
+            "Tstandardish",
             "Tempty"
         ],
         [
@@ -6952,10 +6954,16 @@ const _FE_FLAGSPEC = {
             "value": 5
         },
         {
-            "flag": "Tempty",
+            "flag": "Tstandardish",
             "offset": 168,
             "size": 3,
             "value": 6
+        },
+        {
+            "flag": "Tempty",
+            "offset": 168,
+            "size": 3,
+            "value": 7
         },
         {
             "flag": "Tsparse:10",
@@ -8926,6 +8934,10 @@ const _FE_FLAGSPEC = {
             [
                 "not",
                 "Twildish"
+            ],
+            [
+                "not",
+                "Tstandardish"
             ],
             [
                 "not",

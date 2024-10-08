@@ -4200,6 +4200,85 @@ var FLAG_UISPEC = [
             ]
           },
           {
+            "flag": "Tstandardish",
+            "title": "Standard-ish chest randomization",
+            "description": "A weighted treasure distribution that boots middle tiers more than high tiers.",
+            "subcontrols": [
+              {
+                "flag": "@anon30",
+                "title": "Sparse options",
+                "type": "select",
+                "subcontrols": [
+                  {
+                    "flag": "Tsparse:10",
+                    "title": "Only 10% of chests are filled"
+                  },
+                  {
+                    "flag": "Tsparse:20",
+                    "title": "Only 20% of chests are filled"
+                  },
+                  {
+                    "flag": "Tsparse:30",
+                    "title": "Only 30% of chests are filled"
+                  },
+                  {
+                    "flag": "Tsparse:40",
+                    "title": "Only 40% of chests are filled"
+                  },
+                  {
+                    "flag": "Tsparse:50",
+                    "title": "Only 50% of chests are filled"
+                  },
+                  {
+                    "flag": "Tsparse:60",
+                    "title": "Only 60% of chests are filled"
+                  },
+                  {
+                    "flag": "Tsparse:70",
+                    "title": "Only 70% of chests are filled"
+                  },
+                  {
+                    "flag": "Tsparse:80",
+                    "title": "Only 80% of chests are filled"
+                  },
+                  {
+                    "flag": "Tsparse:90",
+                    "title": "Only 90% of chests are filled"
+                  }
+                ]
+              },
+              {
+                "flag": "@anon31",
+                "title": "Restrict item quality",
+                "type": "select",
+                "subcontrols": [
+                  {
+                    "flag": "Tmaxtier:7",
+                    "title": "Chests contain tier 7 items at best"
+                  },
+                  {
+                    "flag": "Tmaxtier:6",
+                    "title": "Chests contain tier 6 items at best"
+                  },
+                  {
+                    "flag": "Tmaxtier:5",
+                    "title": "Chests contain tier 5 items at best"
+                  },
+                  {
+                    "flag": "Tmaxtier:4",
+                    "title": "Chests contain tier 4 items at best",
+                    "hard": true
+                  },
+                  {
+                    "flag": "Tmaxtier:3",
+                    "title": "Chests contain tier 3 items at best",
+                    "hard": true
+                  }
+                ]
+              }
+            ]
+          },
+          {
             "flag": "Tempty",
             "title": "Chests are empty",
             "hard": true
