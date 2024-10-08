@@ -1,3 +1,6 @@
+## Spells
+This adds a new flag **Cspells:anti** and also modifies the flag name for enabling the J spells list, which changes from **Cj:spells** to **Cspells:j**. The syntax change is to make it clearer that there are now two different ways that spells can change from the vanilla US lists and properties, and while **j:abilities** and **spells:j** are related, the fact that they're not in opposition makes this feel correct to me. **Cspells:j** has not changed at all. [Cspells:anti](</fork_info?md_file=anti_spells_detail>) has a goal of improving the mid-game of most mages, while also delaying their ultimate damaging spells. It aims to achieve this by speeding up the cast times of the elemental spells, and also generally lowering the level that mages learn spells in the mid-game, and pushing learning Nuke and White to somewhere around 1,300,000 xp for the four characters who learn it via levels. See [Cspells:anti](</fork_info?md_file=anti_spells_detail>) for the full details.
+
 ## Treasures
 There are two changes to treasures in this fork: adding a new **Tstandardish** flag, which is something in between **Tpro** and **Twildish**, and a change to the base treasure distribution in some locations.
 
