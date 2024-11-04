@@ -502,6 +502,9 @@ class FlagLogicCore {
             flagset.set("-monsterevade");
             this._lib.push(log, ["correction", "Monsters require evade to flee; forced to add -monsterevade"]);
         }
+        if ((flagset.has("-z:physical") && flagset.has("-z:whichbang"))) {
+            this._simple_disable(flagset, log, "No spells in script", ["-z:whichbang"]);
+        }
         all_spoiler_flags = flagset.get_list("^-spoil:");
         sparse_spoiler_flags = flagset.get_list("^-spoil:sparse");
         if (((all_spoiler_flags.length > 0) && (all_spoiler_flags.length === sparse_spoiler_flags.length))) {

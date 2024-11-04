@@ -36,6 +36,7 @@ from . import encounter_rando
 from . import dialogue_rando
 from . import wyvern_rando
 from . import odin_rando
+from . import zeromus_rando
 from . import sprite_rando
 from . import summons_rando
 from . import objective_rando
@@ -632,6 +633,7 @@ def build(romfile, options, force_recompile=False):
         summons_rando,
         wyvern_rando,
         odin_rando,
+        zeromus_rando,
         dialogue_rando,
         kit_rando,
         custom_weapon_rando

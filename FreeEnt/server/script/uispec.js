@@ -5554,9 +5554,65 @@ var FLAG_UISPEC = [
             "flag": "-vanilla:giant",
             "title": "Vanilla Giant",
             "description": "Removes the added exit at the start of the Giant of Bab-il, forcing you to complete it in order to return to the Big Whale. (Be careful not to get stuck with your only save file being inside the Giant.) This exit is restored once the Giant is completed."
+          }
+        ]
+      },
+      {
+        "flag": "@anon58",
+        "title": "Zeromus fight changes",
+        "subcontrols": [
+          {
+            "flag": "@anon59",
+            "title": "Physical or magical scripting",
+            "type": "select",
+            "subcontrols": [
+              {
+                "flag": "-z:physical",
+                "title": "Physical Z script",
+                "description": "Enable this flag to replace Zeromus' magic-based damaging attacks with physical attacks (Fight, Dark Wave, Needle/Counter). Zeromus now counters some physical commands instead of magic.",
+                "hard": true
+              },
+              {
+                "flag": "-z:physmag",
+                "title": "Random physical or magical Z script",
+                "description": "In half the seeds rolled with this flag, Zeromus will have the physical script from <em>-z:physical</em>, and in the other half Zeromus will have the usual magic script.",
+                "hard": true
+              }
+            ]
           },
           {
-            "flag": "-vanilla:z",
+            "flag": "-z:whichbang",
+            "title": "Replace every Big Bang with another spell",
+            "description": "Each instance of Big Bang is replaced with a (potentially different) spell chosen from a small list, including Big Bang itself.",
+            "hard": true
+          },
+          {
+            "flag": "-z:phaseshift",
+            "title": "Shuffle the three main Z fight phases",
+            "description": "Zeromus has three main phases after the first Big Bang: Virus, Nuke, and Meteo. Enable this flag to shuffle the three attack phases among themselves (the HP thresholds and reactions will not change).",
+            "hard": true
+          },
+          {
+            "flag": "@anon60",
+            "title": "Nerfing of Big Bangs",
+            "type": "select",
+            "subcontrols": [
+              {
+                "flag": "-z:nonerfs",
+                "title": "Prevent nerfing of Big Bangs",
+                "description": "Normally in FF4, Zeromus' Big Bang can be nerfed by using magic to trigger a counter-Nuke between the tick that Z sets spell power for Big Bang and the tick when Big Bang goes off. Enable this flag to prevent that happening by implementing chains.",
+                "hard": true
+              },
+              {
+                "flag": "-z:mustnerf",
+                "title": "9999 damage Big Bangs",
+                "description": "Zeromus will now do 9999 damage with Big Bang unless you nerf it (or avoid it in other ways).",
+                "hard": true
+              }
+            ]
+          },
+          {
+            "flag": "-z:vanillasprite",
             "title": "Vanilla Z sprite",
             "description": "Free Enterprise replaces Zeromus' battle sprite with a random sprite. (Its battle behavior and stats are unchanged.) Enable this flag to preserve Zeromus' original battle sprite."
           }
@@ -5578,7 +5634,7 @@ var FLAG_UISPEC = [
         "description": "<ul>\n    <li>Guidingway will introduce the challenge.</li>\n    <li>Guidingway will not explain the challenge.</li>\n    <li>Wacky challenges are not intended to be balanced, robust, coherent, fair, or bug-free.</li>\n    <li>(They are intended to be wacky.)</li>\n</ul>",
         "subcontrols": [
           {
-            "flag": "@anon58",
+            "flag": "@anon61",
             "title": "Select challenge",
             "type": "select",
             "subcontrols": [
@@ -5749,7 +5805,7 @@ var FLAG_UISPEC = [
         ]
       },
       {
-        "flag": "@anon59",
+        "flag": "@anon62",
         "title": "Miscellaneous tweaks",
         "subcontrols": [
           {
@@ -5775,7 +5831,7 @@ var FLAG_UISPEC = [
     "title": "SPOILERS",
     "controls": [
       {
-        "flag": "@anon60",
+        "flag": "@anon63",
         "title": "No spoiler log",
         "type": "select",
         "subcontrols": [
@@ -5829,7 +5885,7 @@ var FLAG_UISPEC = [
             ]
           },
           {
-            "flag": "@anon61",
+            "flag": "@anon64",
             "title": "Partial spoiler log",
             "subcontrols": [
               {
@@ -5845,7 +5901,7 @@ var FLAG_UISPEC = [
                 "title": "Spoil characters"
               },
               {
-                "flag": "@anon62",
+                "flag": "@anon65",
                 "title": "Spoil treasure chests",
                 "type": "select",
                 "subcontrols": [
