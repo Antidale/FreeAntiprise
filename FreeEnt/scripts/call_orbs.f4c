@@ -56,6 +56,9 @@ msfpatch {
         ldy #$0004
         jsl $=CharEx__GiveSpell
         lda $45 // get the spell code back, as is expected at this point
+        // %if wacky_misspelled%
+        jsl $=Wacky__Misspell
+        // %end%
         jmp $01a8b6
 }
 

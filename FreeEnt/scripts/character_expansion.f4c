@@ -1100,6 +1100,13 @@ msfpatch {
         jsl $=CharEx__GiveSpell_Impl
 
         // part 2: apply to spell sets of axtors in shadow party and party
+        // %if wacky_misspelled%
+        // don't misspell until after adding the spell to the initial state spell list
+          lda $1680
+          jsl $=Wacky__Misspell
+          sta $1680
+        // %end%
+
         stz $1686
         stz $1687
         stz $1688
@@ -1229,12 +1236,6 @@ msfpatch {
           rtl
         %CanLearnSpell:
         // %end%
-        // %if wacky_misspelled%
-          lda $1680
-          pha
-          jsl $=Wacky__Misspell
-          sta $1680
-        // %end%
         ldx $1682
         ldy #$0000
         stz $1684
@@ -1256,10 +1257,6 @@ msfpatch {
         lda $1680
         sta $700000,x
     %Abort:
-        // %if wacky_misspelled%
-          pla
-          sta $1680
-        // %end%
         rtl
 
     %FoundEmptySlot:
