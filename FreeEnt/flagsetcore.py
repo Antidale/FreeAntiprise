@@ -452,7 +452,12 @@ class FlagLogicCore:
             self._lib.push(log, ['correction', 'Monsters require evade to flee; forced to add -monsterevade'])
 
         if flagset.has('-z:physical') and flagset.has('-z:whichbang'):
-            self._simple_disable(flagset, log, 'No spells in script', ['-z:whichbang'])
+            self._simple_disable(flagset, log, 'No guaranteed Big Bangs in script', ['-z:whichbang'])
+
+        if flagset.has_any('-z:chaos', '-z:lavosshell') and flagset.has('-z:phaseshift'):
+            self._simple_disable(flagset, log, 'Random phases take precedence over shuffled phases', ['-z:phaseshift'])
+
+        # add in a couple other restrictions about Z fight stuff
 
         all_spoiler_flags = flagset.get_list(r'^-spoil:')
         sparse_spoiler_flags = flagset.get_list(r'^-spoil:sparse')
