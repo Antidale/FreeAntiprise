@@ -3695,7 +3695,8 @@ var FLAG_UISPEC = [
           },
           {
             "flag": "Cspells:anti",
-            "title": "Characters learn US spells, but progression is different. Nuke/White are notably later."
+            "title": "Characters learn US spells, but progression is different. Nuke/White are notably later.",
+            "fork": true
           }
         ]
       },
@@ -4203,6 +4204,7 @@ var FLAG_UISPEC = [
             "flag": "Tstandardish",
             "title": "Standard-ish chest randomization",
             "description": "A weighted treasure distribution that boots middle tiers more than high tiers.",
+            "fork": true,
             "subcontrols": [
               {
                 "flag": "@anon30",

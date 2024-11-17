@@ -203,7 +203,7 @@
 ..[Cstart:not_fusoya] Cannot start with Fusoya
 <> Spell Options
 .(Cspells:j) Characters learn J-spells
-.(Cspells:anti) Characters learn US spells, but progression is different. Nuke/White are notably later.
+.(Cspells:anti)^ Characters learn US spells, but progression is different. Nuke/White are notably later.
 [Cj:abilities] Characters have J-commands
 [Cnekkie] Characters start with limited gear
 [Cnodupes] Duplicate characters not allowed
@@ -248,7 +248,7 @@
 ..[ECHO:Tstandard]
 .(Twildish) Wild-ish chest randomization
 ..[ECHO:Tstandard]
-.(Tstandardish) Standard-ish chest randomization
+.(Tstandardish)^ Standard-ish chest randomization
 ..[ECHO:Tstandard]
 .(Tempty)! Chests are empty
 [Tno:j] No J-items in chests
