@@ -1102,6 +1102,7 @@ const _FE_FLAGSPEC = {
         "-wacky:isthisrandomized",
         "-wacky:forwardisback",
         "-wacky:dropitlikeitshot",
+        "-wacky:advertising",
         "-tweak:kainmagic",
         "-tweak:edwardheal",
         "-tweak:darkpaladin",
@@ -2153,7 +2154,8 @@ const _FE_FLAGSPEC = {
             "-wacky:saveusbigchocobo",
             "-wacky:isthisrandomized",
             "-wacky:forwardisback",
-            "-wacky:dropitlikeitshot"
+            "-wacky:dropitlikeitshot",
+            "-wacky:advertising"
         ],
         [
             "-spoil:treasure",
@@ -8699,6 +8701,12 @@ const _FE_FLAGSPEC = {
             "offset": 298,
             "size": 6,
             "value": 36
+        },
+        {
+            "flag": "-wacky:advertising",
+            "offset": 298,
+            "size": 6,
+            "value": 37
         },
         {
             "flag": "-tweak:kainmagic",
