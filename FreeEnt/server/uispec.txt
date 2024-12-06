@@ -565,6 +565,7 @@
 ..(-wacky:tellahmaneuver)    "The Tellah Maneuver"
 ..(-wacky:3point)            "The 3-Point System"
 ..(-wacky:timeismoney)       "Time is Money"
+..(-wacky:advertising)       "Truth in Advertising"
 ..(-wacky:darts)             "World Championship of Darts"
 ..(-wacky:unstackable)!      "Unstackable"
 ..(-wacky:whatsmygear)       "What's My Gear Again?"

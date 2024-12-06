@@ -5840,6 +5840,10 @@ var FLAG_UISPEC = [
                 "title": "\"Time is Money\""
               },
               {
+                "flag": "-wacky:advertising",
+                "title": "\"Truth in Advertising\""
+              },
+              {
                 "flag": "-wacky:darts",
                 "title": "\"World Championship of Darts\""
               },
