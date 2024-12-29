@@ -87,6 +87,12 @@ event($17){
 }
 
 msfpatch{
+    .addr $008179
+        jsr $88A6
+        jsl $15C852
+}
+
+msfpatch{
     .addr $15C857
         jsl $=DoorsRando_CheckSelectReset
 
