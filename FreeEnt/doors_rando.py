@@ -396,17 +396,63 @@ def randomize_doors(env, entrances, exits, scope):
             destination = j[5]
             if len(j) == 13:
                 type = "entrances"
-                message = f"{j[5]} is in the {j[4].split('_')[1]} location"
+                entrance_location=j[4].split('_')[1]
+                message = f"{destination} is in the {entrance_location} location"
                 if message not in spoil_entrances:
-                    if j[5] == "#Mist":
+                    if destination == "#Mist":
                         if "#Mist" not in remapped_map:
-                            remapped_map[j[5]] = []
-                        remapped_map[j[5]].append(j[4].split('_')[1])
+                            remapped_map[destination] = []
+                        remapped_map[destination].append(entrance_location)
 
                     else:
-                        remapped_map[j[5]] = j[4].split('_')[1]
+                        remapped_map[destination] = entrance_location
                     spoil_entrances.append(message)
-                    spoil_entrances_for_spoiler.append((j[5], j[4].split('_')[1]))
+                    if "Mist" in entrance_location:
+                        if j[2]==96:
+                            entrance_location = "#Mist West"
+                        else:
+                            entrance_location = "#Mist East"
+
+                    elif "MistCave" in entrance_location:
+                        if j[2]==76:
+                            entrance_location = "#MistCave South"
+                        else:
+                            entrance_location = "#MistCave North"
+                    elif "LunarPassage1" in entrance_location:
+                        if j[3]==20:
+                            entrance_location = "#LunarPassage1 South"
+                        else:
+                            entrance_location = "#LunarPassage1 North"
+                    elif "LunarPassage2" in entrance_location:
+                        if j[2]==40:
+                            entrance_location = "#LunarPassage2 South"
+                        else:
+                            entrance_location = "#LunarPassage2 North"
+
+
+
+                    if "#Mist" == destination:
+                        if j[6]==3:
+                            destination = "#Mist West"
+                        else:
+                            destination = "#Mist East"
+
+                    elif "#MistCave" == destination:
+                        if j[6]==2:
+                            destination = "#MistCave South"
+                        else:
+                            destination = "#MistCave North"
+                    elif "#LunarPassage1" == destination:
+                        if j[6]==12:
+                            destination = "#LunarPassage1 South"
+                        else:
+                            destination = "#LunarPassage1 North"
+                    elif "#LunarPassage2" == destination:
+                        if j[6]==9:
+                            destination = "#LunarPassage2 South"
+                        else:
+                            destination = "#LunarPassage2 North"
+                    spoil_entrances_for_spoiler.append((destination, entrance_location))
             else:
                 type = "exits"
             if location not in graph:
