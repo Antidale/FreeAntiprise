@@ -100,7 +100,7 @@ msfpatch {
         %MainLoop_Full:
             jsr $_JoinFullPartyMenu__CharacterSelect
 
-            // %flag hero_challenge on%
+            // %anyflags: hero_challenge superhero_challenge%
             jsr $_JoinFullPartyMenu__GetSelectedAxtor
             cmp #$01
             bne $+HeroNotSelected
@@ -112,6 +112,37 @@ msfpatch {
             bra $-MainLoop_Full
             
         %HeroNotSelected:
+            // %end%
+
+            // %flag characters_first_in_first_out on %
+            jsr $_JoinFullPartyMenu__GetSelectedAxtor            
+            ldx $_CharEx__OldestAxtorIndex            
+            lda $=CharEx__OldestAxtorBuffer,x            
+            bne $+OldestLoaded
+            ldx #$0000
+        %OldestLoaded:
+            jsr $_JoinFullPartyMenu__GetSelectedAxtor
+            cmp $=CharEx__OldestAxtorBuffer,x
+            beq $+OldestCharSelected
+             // play error sound
+            lda #$12
+            sta $1e00
+            jsl $048004
+            bra $-MainLoop_Full
+        %OldestCharSelected:
+            // %end%
+
+            // %flag characters_force_add on%
+            jsr $_JoinFullPartyMenu__GetSelectedAxtor
+            cmp $1a00
+            bne $+RequiredCharNotSelected
+            
+            // play error sound
+            lda #$12
+            sta $1e00
+            jsl $048004
+            bra $-MainLoop_Full
+        %RequiredCharNotSelected:
             // %end%
             
             jsr $_JoinFullPartyMenu__Confirm
@@ -854,8 +885,11 @@ msfpatch {
         rts
 
     //---------------------------------------------------------
-
+// %flag characters_force_add on%
+    JoinFullPartyMenu__TopText1:      " must join the"      [[ 00 ]]
+// %else%
     JoinFullPartyMenu__TopText1:      " wants to join the"      [[ 00 ]]
+// %end%
     JoinFullPartyMenu__TopText2:      "party. Who will leave?"  [[ 00 ]]
     JoinFullPartyMenu__TopText2Alt:   "party, PERMANENTLY."     [[ 00 ]]
 

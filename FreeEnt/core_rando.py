@@ -6,11 +6,13 @@ effects of these assignments are dealt with in keyitem_rando
 and boss_rando.
 '''
 
-from .rewards import EmptyReward, KeyItemReward, ItemReward, AxtorReward, RewardSlot, RewardsAssignment, REWARD_SLOT_SPOILER_NAMES
+from .rewards import EmptyReward, KeyItemReward, ItemReward, AxtorReward, AxtorChestReward, RewardSlot, RewardsAssignment, REWARD_SLOT_SPOILER_NAMES
 from . import databases
 from . import dep_checker
 from . import priority_assigner
 from . import util
+from . import treasure_rando
+from . import character_rando
 from .spoilers import SpoilerRow
 
 from .address import *
@@ -27,6 +29,27 @@ COMMON_BRANCHES = [
     ]
 
 HOOK_UNDERGROUND_BRANCH = ['#item.fe_Hook?', 'kingqueen_slot', 'rubicant_slot', 'underground']
+
+STARTING_ITEM_MAP = {
+    'Kstart:package'                        : '#item.Package',
+    'Kstart:sandruby'                       : '#item.Sandruby',
+    'Kstart:baron'                          : '#item.Baron',
+    'Kstart:twinharp'                       : '#item.TwinHarp',
+    'Kstart:earthcrystal'                   : '#item.EarthCrystal',
+    'Kstart:magma'                          : '#item.Magma',
+    'Kstart:tower'                          : '#item.Tower',
+    'Kstart:hook'                           : '#item.fe_Hook',
+    'Kstart:luca'                           : '#item.Luca',
+    'Kstart:darkness'                       : '#item.DarkCrystal',
+    'Kstart:rat'                            : '#item.Rat',
+    'Kstart:pan'                            : '#item.Pan',
+    'Kstart:crystal'                        : '#item.Crystal',
+    'Kstart:legend'                         : '#item.Legend',
+    'Kstart:adamant'                        : '#item.Adamant',
+    'Kstart:spoon'                          : '#item.Spoon',
+    'Kstart:pink'                           : '#item.Pink',
+    'Kstart:pass'                           : '#item.Pass',
+}
 
 ESSENTIAL_KEY_ITEMS = {
     KeyItemReward('#item.Package')         : RewardSlot.starting_item, #'package_slot',
@@ -92,7 +115,10 @@ ITEM_SLOTS = {
     RewardSlot.pan_trade_item         : ['underground?', '#item.Pan?'],
     RewardSlot.feymarch_item          : ['underground?'],
     RewardSlot.rat_trade_item         : ['#item.fe_Hook?', '#item.Rat?'],
+    RewardSlot.pink_trade_item        : ['#item.fe_Hook?', '#item.Pink?'],
+    RewardSlot.forge_item             : ['underground?', '#item.Adamant?', '#item.Legend?'],
     RewardSlot.rydias_mom_item        : ['dmist?'],
+    RewardSlot.dwarf_hospital_item    : ['underground?'],
     }
 
 SUMMON_QUEST_SLOTS = {
@@ -145,30 +171,30 @@ CHEST_ITEM_SLOTS = {
     }
 
 CHEST_ITEM_SLOT_GROUPS = [
-        [
+        ( [
             RewardSlot.eblan_chest_1,
             RewardSlot.eblan_chest_2,
             RewardSlot.eblan_chest_3,
-        ],
-        [
+        ], 'above' ),
+        ( [
             RewardSlot.zot_chest,
-        ],
-        [
+        ], 'above' ),
+        ( [
             RewardSlot.lower_babil_chest_1,
             RewardSlot.lower_babil_chest_2,
             RewardSlot.lower_babil_chest_3,
             RewardSlot.lower_babil_chest_4,
-        ],
-        [
+        ], 'below' ),
+        ( [
             RewardSlot.cave_eblan_chest,
-        ],
-        [
+        ], 'above' ),
+        ( [
             RewardSlot.upper_babil_chest,
-        ],
-        [
+        ], 'above' ),
+        ( [
             RewardSlot.cave_of_summons_chest,
-        ],
-        [
+        ], 'below' ),
+        ( [
             RewardSlot.sylph_cave_chest_1,
             RewardSlot.sylph_cave_chest_2,
             RewardSlot.sylph_cave_chest_3,
@@ -176,14 +202,14 @@ CHEST_ITEM_SLOT_GROUPS = [
             RewardSlot.sylph_cave_chest_5,
             RewardSlot.sylph_cave_chest_6,
             RewardSlot.sylph_cave_chest_7,
-        ],
-        [
+        ], 'below' ),
+        ( [
             RewardSlot.giant_chest,
-        ],
-        [
+        ], 'above' ),
+        ( [
             RewardSlot.lunar_path_chest,
-        ],
-        [
+        ], 'above' ),
+        ( [
             RewardSlot.lunar_core_chest_1,
             RewardSlot.lunar_core_chest_2,
             RewardSlot.lunar_core_chest_3,
@@ -193,7 +219,7 @@ CHEST_ITEM_SLOT_GROUPS = [
             RewardSlot.lunar_core_chest_7,
             RewardSlot.lunar_core_chest_8,
             RewardSlot.lunar_core_chest_9,
-        ],
+        ], 'lst' ),
     ]
 
 CHEST_NUMBERS = {
@@ -326,10 +352,13 @@ QUEST_REWARD_CURVES = {
         RewardSlot.pan_trade_item,
         RewardSlot.feymarch_item,
         RewardSlot.rat_trade_item,
+        RewardSlot.pink_trade_item,
         RewardSlot.sylph_item,
         RewardSlot.feymarch_queen_item,
         RewardSlot.feymarch_king_item,
         RewardSlot.baron_throne_item,
+        RewardSlot.forge_item,
+        RewardSlot.dwarf_hospital_item,
     ],
 
     'Moon_Quest' : [
@@ -343,20 +372,20 @@ QUEST_REWARD_CURVES = {
     ]
 }
 
+default_item_reward = ItemReward('#item.Cure1')
+
 def apply(env):
+    if (env.options.flags.has('no_free_key_item_package')):
+        ITEM_SLOTS[RewardSlot.rydias_mom_item] = ['#item.Package?']
+
     treasure_dbview = databases.get_treasure_dbview()
     treasure_dbview.refine(lambda t: not t.exclude)
 
     items_dbview = databases.get_items_dbview()
-    if env.options.flags.has('treasure_no_j_items'):
-        items_dbview.refine(lambda it: not it.j)
-    if env.options.flags.has('no_adamants'):
-        items_dbview.refine(lambda it: it.const != '#item.AdamantArmor')
-    if env.options.flags.has('no_cursed_rings'):
-        items_dbview.refine(lambda it: it.const != '#item.Cursed')
+    treasure_rando.refineItemsView(items_dbview, env)
 
     unsafe = False
-    if env.options.flags.has('key_items_unsafe'):
+    if env.options.flags.has('key_items_unsafe') or env.options.flags.has('key_items_unsafer'):
         unsafe = True
 
     keyitem_assigner = priority_assigner.PriorityAssigner()
@@ -380,18 +409,56 @@ def apply(env):
     keyitem_assigner.item_tier(3).set_max_slot_bucket(2)
 
     keyitem_assigner.slot_tier(0).extend(ITEM_SLOTS)
-    if env.options.flags.has('no_free_key_item'):
+    if not env.options.flags.has('key_item_from_forge'):
+        keyitem_assigner.slot_tier(0).remove(RewardSlot.forge_item)
+    if not env.options.flags.has('key_item_from_pink_tail'):
+        keyitem_assigner.slot_tier(0).remove(RewardSlot.pink_trade_item)
+    if env.options.flags.has('no_free_key_item_dwarf'):
         keyitem_assigner.slot_tier(0).remove(RewardSlot.toroia_hospital_item)
+        keyitem_assigner.slot_tier(0).remove(RewardSlot.rydias_mom_item)
+    elif env.options.flags.has_any('no_free_key_item', 'no_free_key_item_package'):
+        keyitem_assigner.slot_tier(0).remove(RewardSlot.toroia_hospital_item)
+        keyitem_assigner.slot_tier(0).remove(RewardSlot.dwarf_hospital_item)
     else:
         keyitem_assigner.slot_tier(0).remove(RewardSlot.rydias_mom_item)
+        keyitem_assigner.slot_tier(0).remove(RewardSlot.dwarf_hospital_item)
 
     keyitem_assigner.item_tier(1).extend(ESSENTIAL_KEY_ITEMS)
     keyitem_assigner.item_tier(2).extend(NONESSENTIAL_KEY_ITEMS)
+
+    forced_hook_route = env.options.flags.has('key_items_force_hook')
+    has_magma_key = True
+    # assign gated objective item and metadata
+    gated_objective_item = env.meta['gated_objective_reward']           
+    if '#' not in gated_objective_item:
+        env.add_substitution('has gated objective', '')
+    else:
+        # Remove both methods of underground access when magma is specified
+        if gated_objective_item == "#item.Magma":
+            forced_hook_route = True
+            has_magma_key = False
+        elif gated_objective_item == "#item.fe_Hook":
+            forced_hook_route = False
+        keyitem_assigner.remove_item(gated_objective_item)
+        env.meta['gated_objective_reward'] = gated_objective_item
+        env.add_substitution('no gated objective', '')
+
+    forced_starting_key_item = ''
+    for f in env.options.flags.get_list(rf'^Kstart:'):
+        forced_starting_key_item = STARTING_ITEM_MAP[f]
+        keyitem_assigner.slot_tier(0).remove(RewardSlot.starting_item)
+        keyitem_assigner.remove_item(forced_starting_key_item)
+        break
 
     if env.meta.get('has_objectives', False) and env.meta.get('zeromus_required', True):
         keyitem_assigner.item_tier(1).remove(KeyItemReward('#item.Crystal'))
         if env.options.flags.has('objective_mode_classicforge'):
             keyitem_assigner.item_tier(3).append(ItemReward('#item.Excalibur'))
+
+    if env.options.flags.has('key_item_from_forge'):
+        keyitem_assigner.item_tier(3).append(ItemReward('#item.Excalibur'))
+    if env.options.flags.has('key_item_from_pink_tail') and not env.options.flags.has('no_adamants'):
+        keyitem_assigner.item_tier(3).append(ItemReward('#item.AdamantArmor'))
 
     for item in env.meta.get('objective_required_key_items', []):
         reward = KeyItemReward(item)
@@ -415,65 +482,102 @@ def apply(env):
         keyitem_incapable_fight_slots.extend(MOON_BOSS_SLOTS)
 
     env.rnd.shuffle(keyitem_capable_fight_slots)
-    num_privileged_fight_slots = int(math.ceil(len(keyitem_capable_fight_slots) / 2))
+    if not env.options.flags.has('key_items_unweighted'):
+        num_privileged_fight_slots = int(math.ceil(len(keyitem_capable_fight_slots) / 2))
 
-    # limit the number of fight slots that may contain key items according to probability curve
-    r = env.rnd.random()
-    while r < 0.5:
-        num_privileged_fight_slots += 1
-        r *= 2.0
+        # limit the number of fight slots that may contain key items according to probability curve
+        r = env.rnd.random()
+        while r < 0.5:
+            num_privileged_fight_slots += 1
+            r *= 2.0
 
-    keyitem_assigner.slot_tier(0).extend(keyitem_capable_fight_slots[:num_privileged_fight_slots])
-    keyitem_assigner.slot_tier(2).extend(keyitem_capable_fight_slots[num_privileged_fight_slots:])
+        keyitem_assigner.slot_tier(0).extend(keyitem_capable_fight_slots[:num_privileged_fight_slots])
+        keyitem_assigner.slot_tier(2).extend(keyitem_capable_fight_slots[num_privileged_fight_slots:])
+    else:
+        # every possible KI capable fight slot gets a uniform chance
+        keyitem_assigner.slot_tier(0).extend(keyitem_capable_fight_slots)
 
     keyitem_assigner.slot_tier(3).extend(keyitem_incapable_fight_slots)
 
-    if env.options.flags.has('key_items_in_miabs'):
-        # limit the number of MIABs that may contain key items according to probability curve
-        max_good_per_area = 2
-        r = env.rnd.random()
-        while r < 0.5:
-            max_good_per_area += 1
-            r *= 2.0
+   # limit the number of MIABs that may contain key items according to probability curve
+    # Kmiab granularity: instead of splitting it up into LST and not-LST, split into "above ground", "below ground", and LST
+    # also pre-process to handle "standard" and "all" (according to Kunsafe/moon in the case of standard); "all" takes priority
+    # over "standard", which takes priority over the subsets. CHEST_ITEM_SLOT_GROUPS is modified to be tuples containing the
+    # broad grouping information (which is why a list comprehension is necessary to pick out the groups).
+    # potential_miabs is to be used later, for hinting purposes/etc.
+
+    # need to strip off 'Kmiab:' from the potentially multiple flags, so can't just use get_suffix (only gets the first)
+    miab_flags = [flag[6:] for flag in env.options.flags.get_list('Kmiab:')]
+    if miab_flags:
+        good_miab_groups = []
+        bad_miab_groups = []
+
+        if 'all' in miab_flags:
+            good_miab_groups.extend([group for group, flag in CHEST_ITEM_SLOT_GROUPS])
+        elif 'standard' in miab_flags:
+            if env.options.flags.has('key_items_in_moon_bosses') or unsafe:
+                good_miab_groups.extend([group for group, flag in CHEST_ITEM_SLOT_GROUPS])
+            else:
+                good_miab_groups.extend([group for group, flag in CHEST_ITEM_SLOT_GROUPS if flag != 'lst'])
+                bad_miab_groups.extend([group for group, flag in CHEST_ITEM_SLOT_GROUPS if flag == 'lst'])
+        else:
+            good_miab_groups.extend([group for group, flag in CHEST_ITEM_SLOT_GROUPS if flag in miab_flags])
+            bad_miab_groups.extend([group for group, flag in CHEST_ITEM_SLOT_GROUPS if flag not in miab_flags])
 
         good_miabs = []
         bad_miabs = []
-        for group in CHEST_ITEM_SLOT_GROUPS:
-            if 'lunar_core_chest' in group[0].name and not (env.options.flags.has('key_items_in_moon_bosses') or unsafe):
+        potential_miabs = []
+        if not env.options.flags.has('key_items_unweighted'):
+            # limit the number of MIABs that may contain key items according to probability curve
+            max_good_per_area = 2
+            r = env.rnd.random()
+            while r < 0.5:
+                max_good_per_area += 1
+                r *= 2.0
+
+            for group in good_miab_groups:
+                potential_miabs.extend(group)
+                if len(group) > max_good_per_area:
+                    group = list(group)
+                    env.rnd.shuffle(group)
+                    good_miabs.extend(group[:max_good_per_area])
+                    bad_miabs.extend(group[max_good_per_area:])
+                else:
+                    good_miabs.extend(group)
+
+            for group in bad_miab_groups:
                 bad_miabs.extend(group)
-            elif len(group) > max_good_per_area:
-                group = list(group)
-                env.rnd.shuffle(group)
-                good_miabs.extend(group[:max_good_per_area])
-                bad_miabs.extend(group[max_good_per_area:])
-            else:
+
+            if 'all' in miab_flags or 'standard' in miab_flags or len(miab_flags) != 1:
+                env.rnd.shuffle(good_miabs)
+                bad_miabs.extend(good_miabs[:3])
+                good_miabs = good_miabs[3:]
+
+        else:
+            for group in good_miab_groups:
                 good_miabs.extend(group)
-
-        env.rnd.shuffle(good_miabs)
-        bad_miabs.extend(good_miabs[:3])
-        good_miabs = good_miabs[3:]
-
+                potential_miabs.extend(group)
+            for group in bad_miab_groups:
+                bad_miabs.extend(group)
         keyitem_assigner.slot_tier(1).extend(good_miabs)
-        keyitem_assigner.slot_tier(3).extend(bad_miabs)
+        keyitem_assigner.slot_tier(3).extend(bad_miabs)   
     else:
         keyitem_assigner.slot_tier(3).extend(CHEST_ITEM_SLOTS)
-    
 
-    if env.options.flags.has('pass_in_key_items'):
+    if env.options.flags.has('pass_in_key_items') and not env.options.flags.has('key_items_start_pass'):
         keyitem_assigner.item_tier(1).append(ItemReward('#item.Pass'))
 
     ## Deprecated no_magma code, preserving in case of future implementation.
     # if env.options.flags.has('key_items_no_magma'):
     #     keyitem_assigner.item_tier(1).remove(KeyItemReward('#item.Magma'))
     #     layout = '"Package  SandRuby   [lightsword]Legend"      [[ 01 ]]\n        "[key]Baron   [harp]TwinHarp  [crystal]Earth" [[ 01 ]]\n        "         [key]Tower     Hook"            [[ 01 ]]\n        "[key]Luca    [crystal]Darkness  [tail]Rat"   [[ 01 ]]\n        "Adamant  Pan        [knife]Spoon"            [[ 01 ]]\n        "[tail]Pink    [crystal]Crystal"              [[ 00 ]]'
-    #     env.add_substitution('tracker layout', layout)
-
+    #     env.add_substitution('tracker layout', layout)    
     assignable_boss_slots = BOSS_SLOTS.copy()
     bosses = list(BOSSES)
 
     if env.options.flags.has('key_items_force_magma'):
         prevent_hook_seed = True
-    elif not env.options.flags.has_any('key_items_in_summon_quests', 'key_items_in_moon_bosses', 'key_items_in_miabs') and not env.options.flags.has('key_items_force_hook'):
+    elif not (env.options.flags.has_any('key_items_in_summon_quests', 'key_items_in_moon_bosses') or miab_flags) and not forced_hook_route:
         prevent_hook_seed = (env.rnd.random() < 0.5)
     else:
         prevent_hook_seed = False
@@ -484,6 +588,9 @@ def apply(env):
     while not found_valid_assignment and attempts < MAX_RANDOMIZATION_ATTEMPTS:
         boss_assignment = {}
         rewards_assignment = RewardsAssignment()
+
+        # Assume no gated objective by default
+        rewards_assignment[RewardSlot.gated_objective] = EmptyReward()
 
         # assign key items
         if env.options.flags.has('key_items_vanilla'):
@@ -498,7 +605,9 @@ def apply(env):
                     
                 slot = ESSENTIAL_KEY_ITEMS[item]
                 if slot:
-                    if env.options.flags.has('no_free_key_item') and slot == RewardSlot.toroia_hospital_item:
+                    if env.options.flags.has('no_free_key_item_dwarf') and slot == RewardSlot.toroia_hospital_item:
+                        slot = RewardSlot.dwarf_hospital_item
+                    if env.options.flags.has_any('no_free_key_item', 'no_free_key_item_package') and slot == RewardSlot.toroia_hospital_item:
                         slot = RewardSlot.rydias_mom_item
                     rewards_assignment[slot] = item
                     used_keyitems.add(item.item)
@@ -517,6 +626,8 @@ def apply(env):
                     if slot not in rewards_assignment:
                         remaining_slots.append(slot)
         else:
+            if forced_starting_key_item != '':
+                rewards_assignment[RewardSlot.starting_item] = KeyItemReward(forced_starting_key_item)
             keyitem_assignment, remaining_slots, remaining_items = keyitem_assigner.assign(env.rnd)
             rewards_assignment.update(keyitem_assignment)
 
@@ -554,7 +665,7 @@ def apply(env):
                 print('  {} <- {}'.format(str(k), rewards_assignment[k]))
             for k in boss_assignment:
                 print('  {} <- {}'.format(k, boss_assignment[k]))
-            print(f'remaining slots: {",".join([str(s) for s in remaining_slots])}')
+            print('remaining slots: {' + '\n'.join([str(s) for s in remaining_slots]) + '}')
 
         # build dependency checker
         checker = dep_checker.DepChecker()
@@ -576,11 +687,20 @@ def apply(env):
         if not prevent_hook_seed:
             add_branch_with_substitutions(*HOOK_UNDERGROUND_BRANCH)
 
-        for slot in rewards_assignment:
+        
+        if gated_objective_item != '':
+            rewards_assignment[RewardSlot.gated_objective] = ItemReward(gated_objective_item,True)
+
+        for slot in rewards_assignment:            
             if rewards_assignment[slot] == EmptyReward():
                 continue
 
-            if slot in ITEM_SLOTS:
+            if slot == RewardSlot.gated_objective:
+                if gated_objective_item == "#item.Magma" or gated_objective_item == "#item.fe_Hook":
+                    src_branch = ['moon?', 'underground']
+                else:
+                    continue
+            elif slot in ITEM_SLOTS:
                 src_branch = ITEM_SLOTS[slot]
             elif slot in SUMMON_QUEST_SLOTS:
                 src_branch = SUMMON_QUEST_SLOTS[slot]
@@ -632,13 +752,69 @@ def apply(env):
         if underground_path_disallowed:
             tests.append(['underground', underground_path_disallowed])
 
-        if env.options.flags.has('key_items_force_hook'):
-            tests.append(['#item.Magma', [], 'underground'])
+        magma_path_forced = None 
+
+        if env.options.flags.has('key_items_unsafer'):
+            if forced_hook_route:
+                magma_path_forced = 'moon'
+            tests.append(['#item.fe_Hook', [], 'moon'])
+
+        if forced_hook_route:
+            magma_path_forced = 'underground'
+
+        if magma_path_forced and has_magma_key:
+            tests.append(['#item.Magma', [], magma_path_forced])
+
+        if env.options.flags.has('key_items_late_darkness'):
+            tests.append(['#item.DarkCrystal', [], 'underground'])
 
         # must be able to encounter all bosses required of forced objective flags
-        tests.extend(env.meta.get('objective_required_bosses', []))
+        required_bosses = env.meta.get('objective_required_bosses', [])
+        tests.extend(required_bosses)
+        if env.options.flags.has('no_free_key_item'):
+            required_bosses.add('dmist')
+
+        banned_required_boss_slots = set() 
+        if env.options.flags.has('bosses_no_required_at_summon'):
+            banned_required_boss_slots.update([boss_assignment['asura_slot'],
+                                               boss_assignment['leviatan_slot'],
+                                               boss_assignment['odin_slot'],
+                                               boss_assignment['bahamut_slot']])
+        if env.options.flags.has('bosses_no_required_on_moon'):
+            banned_required_boss_slots.update([boss_assignment['bahamut_slot'],
+                                               boss_assignment['paledim_slot'],
+                                               boss_assignment['wyvern_slot'],
+                                               boss_assignment['plague_slot'],
+                                               boss_assignment['dlunar_slot'],
+                                               boss_assignment['ogopogo_slot']])
+        if env.options.flags.has('bosses_no_required_in_zot'):
+            banned_required_boss_slots.update([boss_assignment['magus_slot'],
+                                               boss_assignment['valvalis_slot']])
+        if env.options.flags.has('bosses_no_required_on_hook'):
+            banned_required_boss_slots.update([boss_assignment['kingqueen_slot'],
+                                               boss_assignment['rubicant_slot']])
+        if env.options.flags.has('bosses_no_required_in_giant'):
+            banned_required_boss_slots.update([boss_assignment['elements_slot'],
+                                               boss_assignment['cpu_slot']])
+        if env.options.flags.has('bosses_no_required_in_sealedcave'):
+            banned_required_boss_slots.update([boss_assignment['evilwall_slot']])
+        if env.options.flags.has('bosses_no_required_at_package'):
+            banned_required_boss_slots.update([boss_assignment['officer_slot']])
 
         found_valid_assignment = True
+
+        if banned_required_boss_slots:
+            for required_boss in required_bosses:
+                if required_boss in banned_required_boss_slots:
+                    if DEBUG:
+                        print(f'Boss {required_boss} is in a restricted spot')
+                    found_valid_assignment = False
+                    break
+
+        if not found_valid_assignment:
+            attempts += 1
+            continue
+
         for test in tests:
             if type(test) is list:
                 if len(test) == 3:
@@ -693,8 +869,8 @@ def apply(env):
                     rewards_assignment[slot] = item
         else:
             pool.extend(MOON_BOSS_ITEMS)
-
-        if is_vanilla and not env.options.flags.has('key_items_in_miabs'):
+        
+        if is_vanilla and not miab_flags:
             for slot in CHEST_NUMBERS:
                 if slot not in rewards_assignment:
                     treasure = treasure_dbview.find_one(lambda t : [t.map, t.index] == CHEST_NUMBERS[slot])
@@ -712,19 +888,36 @@ def apply(env):
                         rewards_assignment[slot] = pool.pop()
                     except:
                         # Pnone + win:crystal causes an issue under Tvanilla | Tshuffle. This is a workaround to that.
-                        rewards_assignment[slot] = (ItemReward('#item.Cure1') if not is_vanilla else EmptyReward())
+                        rewards_assignment[slot] = (default_item_reward if not is_vanilla else EmptyReward())
     else:
         # revised Rivers rando
-        curves_dbview = databases.get_curves_dbview()
+        curves_dbview = databases.get_tvanillaish_dbview() if (env.options.flags.has('treasure_vanillaish')) else databases.get_curves_dbview()
 
         unassigned_quest_slots = [slot for slot in (list(ITEM_SLOTS) + list(SUMMON_QUEST_SLOTS) + list(MOON_BOSS_SLOTS)) if slot not in rewards_assignment]
-        if env.options.flags.has('no_free_key_item'):
+        if env.options.flags.has('no_free_key_item_dwarf'):
             unassigned_quest_slots.remove(RewardSlot.toroia_hospital_item)
+            unassigned_quest_slots.remove(RewardSlot.rydias_mom_item)
+        elif env.options.flags.has_any('no_free_key_item', 'no_free_key_item_package'):
+            unassigned_quest_slots.remove(RewardSlot.toroia_hospital_item)
+            unassigned_quest_slots.remove(RewardSlot.dwarf_hospital_item)
         else:
             unassigned_quest_slots.remove(RewardSlot.rydias_mom_item)
+            unassigned_quest_slots.remove(RewardSlot.dwarf_hospital_item)
+
+        if not env.options.flags.has('key_item_from_forge'):
+            unassigned_quest_slots.remove(RewardSlot.forge_item)
+        if not env.options.flags.has('key_item_from_pink_tail'):
+            unassigned_quest_slots.remove(RewardSlot.pink_trade_item)
+
+        mintier = env.options.flags.get_suffix('Tmintier:')
+        if mintier:
+            mintier = int(mintier)
 
         if env.options.flags.has('treasure_standard') or env.options.flags.has('treasure_wild'):
-            src_pool = items_dbview.find_all(lambda it: it.tier in [6, 7, 8])
+            reward_tiers = [6, 7, 8]
+            if mintier:
+                reward_tiers = [tier for tier in reward_tiers if tier >= mintier]
+            src_pool = items_dbview.find_all(lambda it: it.tier in reward_tiers)
             pool = list(src_pool)
             while len(pool) < len(unassigned_quest_slots):
                 pool.append(env.rnd.choice(src_pool))
@@ -738,6 +931,12 @@ def apply(env):
                 weights = {i : getattr(quest_curve, f"tier{i}") for i in range(1,9)}
                 if env.options.flags.has('treasure_wild_weighted'):
                     weights = util.get_boosted_weights(weights)
+                if env.options.flags.has('treasure_semipro'):
+                    weights = util.get_semiboosted_weights(weights)
+                if mintier:
+                    for tier in range(1,mintier):
+                        weights[mintier] += weights[tier]
+                        weights[tier] = 0
                 quest_distribution = util.Distribution(weights)
                 tier_counts = quest_distribution.choose_many(env.rnd, len(unassigned_quest_slots_for_curve))
                 pool = []
@@ -747,6 +946,10 @@ def apply(env):
 
                     tier_src_pool = items_dbview.find_all(lambda it: it.tier == tier)
                     tier_pool = list(tier_src_pool)
+
+                    if len(tier_pool) == 0:
+                        continue
+
                     if len(tier_pool) > tier_counts[tier]:
                         tier_pool = env.rnd.sample(tier_pool, tier_counts[tier])
                     else:
@@ -754,17 +957,37 @@ def apply(env):
                             tier_pool.append(env.rnd.choice(tier_src_pool))
                     pool.extend(tier_pool)
 
-                env.rnd.shuffle(pool)
+                env.rnd.shuffle(pool)                
                 for slot in unassigned_quest_slots_for_curve:
-                    rewards_assignment[slot] = ItemReward(pool.pop().const)
+                    reward_to_insert = default_item_reward
+                    if len(pool) > 0:
+                        reward_to_insert = ItemReward(pool.pop().const)
+                    rewards_assignment[slot] = reward_to_insert
             
             for slot in unassigned_quest_slots:
-                if slot not in rewards_assignment:
-                    raise Exception(f"No reward assigned for slot {slot}")
+                if slot not in rewards_assignment:     
+                    rewards_assignment[slot] = default_item_reward
 
         unassigned_chest_slots = [slot for slot in CHEST_ITEM_SLOTS if slot not in rewards_assignment]
+
+        if not env.options.flags.has('characters_in_treasure_relaxed') and (env.options.flags.has('characters_in_treasure_earned') or env.options.flags.has('characters_in_treasure_free')):
+            for target_slot in character_rando.RESTRICTED_SLOTS:                
+                # Find the slot this character was assigned to                
+                if (target_slot in character_rando.FREE_SLOTS and env.options.flags.has('characters_in_treasure_free') or
+                    target_slot in character_rando.EARNED_SLOTS and env.options.flags.has('characters_in_treasure_earned')):
+                    print(f'Putting restricted slot {target_slot} in a MIAB chest')
+                    character_slot = character_rando.SLOTS[target_slot]
+                    rnd_chest_slot = env.rnd.choice(unassigned_chest_slots)
+                    rewards_assignment[rnd_chest_slot] = AxtorChestReward('#item.fe_CharacterChestItem#_'+"{:02d}".format(character_slot))
+                    t = treasure_dbview.find_one(lambda t: [t.map, t.index] == CHEST_NUMBERS[rnd_chest_slot])
+                    print(f'AxtorChestReward for slot {target_slot} {t.spoilerarea} - {t.spoilersubarea} - {t.spoilerdetail}')
+                    unassigned_chest_slots.remove(rnd_chest_slot)
+                        
         if env.options.flags.has('treasure_standard') or env.options.flags.has('treasure_wild'):
-            src_pool = items_dbview.find_all(lambda it: it.tier >= 5)
+            # exclude HrGlass1 and HrGlass3 from MIAB items if HrGlass2 is excluded
+            min_miab_tier = mintier if (mintier and mintier >= 5) else 5
+            max_miab_tier = 98 if (env.options.flags.has('treasure_standard') or (mintier and mintier >= 6)) else 99
+            src_pool = items_dbview.find_all(lambda it: it.tier >= min_miab_tier and it.tier <= max_miab_tier)
             pool = list(src_pool)
             while len(pool) < len(unassigned_chest_slots):
                 pool.append(env.rnd.choice(src_pool))
@@ -783,7 +1006,12 @@ def apply(env):
                 weights = {i : getattr(c, f"tier{i}") for i in range(1,9)}
                 if env.options.flags.has('treasure_wild_weighted'):
                     weights = util.get_boosted_weights(weights)
-
+                if env.options.flags.has('treasure_semipro'):
+                    weights = util.get_semiboosted_weights(weights)
+                if mintier:
+                    for tier in range(1,mintier):
+                        weights[mintier] += weights[tier]
+                        weights[tier] = 0
                 miab_distributions[c.area[len("MIAB_"):]] = util.Distribution(weights)
 
             tier_counts_by_area = {}
@@ -800,22 +1028,32 @@ def apply(env):
             pools = {}
             for tier in total_tier_counts:
                 src_pool = items_dbview.find_all(lambda it: it.tier == tier)
+                if len(src_pool) == 0:
+                    continue
+
                 if len(src_pool) > total_tier_counts[tier]:
                     pools[tier] = env.rnd.sample(src_pool, total_tier_counts[tier])
                 else:
                     pools[tier] = list(src_pool)
                     while len(pools[tier]) < total_tier_counts[tier]:
                         pools[tier].append(env.rnd.choice(src_pool))
-                env.rnd.shuffle(pools[tier])
+                env.rnd.shuffle(pools[tier])            
 
             for area in unassigned_chest_slots_by_area:
+                
                 area_pool = []
                 for tier in tier_counts_by_area[area]:
+                    if tier not in pools:
+                        continue
+
                     for i in range(tier_counts_by_area[area][tier]):
                         area_pool.append(pools[tier].pop())
-                env.rnd.shuffle(area_pool)
+                env.rnd.shuffle(area_pool)                
                 for slot in unassigned_chest_slots_by_area[area]:
-                    rewards_assignment[slot] = ItemReward(area_pool.pop().const)
+                    reward_to_insert = default_item_reward
+                    if len(area_pool) != 0:
+                        reward_to_insert = ItemReward(area_pool.pop().const)
+                    rewards_assignment[slot] = reward_to_insert
 
     # randomize fight treasure locations (keyitem rando needs to know this for ending)
     env.meta['miab_locations'] = {}
@@ -830,6 +1068,7 @@ def apply(env):
         for area in areas:
             new_chests = env.rnd.sample(treasure_dbview.find_all(lambda t: t.area == area), len(areas[area]))
             for i,slot in enumerate(areas[area]):
+                #print(f'New MAIB location is {new_chests[i].spoilerarea} - {new_chests[i].spoilersubarea} - {new_chests[i].spoilerdetail}')
                 env.meta['miab_locations'][slot] = [new_chests[i].map, new_chests[i].index]
 
     # hacky cleanup step for _1 and _2 suffixes, and build key item metadata for random objectives
@@ -853,12 +1092,13 @@ def apply(env):
     if env.meta.get('has_objectives', False) and env.meta.get('zeromus_required', True):
         rewards_assignment[RewardSlot.fixed_crystal] = KeyItemReward('#item.Crystal')
 
-    if env.options.flags.has('no_adamants'):
-        items = items_dbview.find_all(lambda it: it.tier in [7, 8])
-        pink_tail_item = env.rnd.choice(items)
-        rewards_assignment[RewardSlot.pink_trade_item] = ItemReward(pink_tail_item.const)
-    else:
-        rewards_assignment[RewardSlot.pink_trade_item] = ItemReward('#item.AdamantArmor')
+    if not env.options.flags.has('key_item_from_pink_tail'):
+        if env.options.flags.has('no_adamants'):
+            items = items_dbview.find_all(lambda it: it.tier in [7, 8])
+            pink_tail_item = env.rnd.choice(items)
+            rewards_assignment[RewardSlot.pink_trade_item] = ItemReward(pink_tail_item.const)
+        else:
+            rewards_assignment[RewardSlot.pink_trade_item] = ItemReward('#item.AdamantArmor')
 
     # for now, assign flat character positions
     rewards_assignment[RewardSlot.starting_character] = AxtorReward('#actor.DKCecil')
@@ -915,21 +1155,33 @@ def apply(env):
     # purposes, might as well do that here
     if env.options.hide_flags:
         potential_key_item_slots = list(ITEM_SLOTS) + list(SUMMON_QUEST_SLOTS) + list(MOON_BOSS_SLOTS) + list(CHEST_ITEM_SLOTS)
+        potential_key_item_slots.append(RewardSlot.forge_item)
+        potential_key_item_slots.append(RewardSlot.pink_trade_item)
     elif env.options.flags.has('key_items_vanilla'):
         potential_key_item_slots = [s for s in range(RewardSlot.MAX_COUNT) if s in rewards_assignment and isinstance(rewards_assignment[s], ItemReward) and rewards_assignment[s].is_key]
     else:
         potential_key_item_slots = list(ITEM_SLOTS)
-        if env.options.flags.has('no_free_key_item'):
+        if env.options.flags.has('no_free_key_item_dwarf'):
             potential_key_item_slots.remove(RewardSlot.toroia_hospital_item)
+            potential_key_item_slots.remove(RewardSlot.rydias_mom_item)
+        elif env.options.flags.has('no_free_key_item'):
+            potential_key_item_slots.remove(RewardSlot.toroia_hospital_item)
+            potential_key_item_slots.remove(RewardSlot.dwarf_hospital_item)
         else:
             potential_key_item_slots.remove(RewardSlot.rydias_mom_item)
+            potential_key_item_slots.remove(RewardSlot.dwarf_hospital_item)
         if env.options.flags.has('key_items_in_summon_quests'):
             potential_key_item_slots.extend(SUMMON_QUEST_SLOTS)
         if env.options.flags.has('key_items_in_moon_bosses'):
-            potential_key_item_slots.extend(MOON_BOSS_SLOTS)
-        if env.options.flags.has('key_items_in_miabs'):
-            potential_key_item_slots.extend(CHEST_ITEM_SLOTS)
-
+            potential_key_item_slots.extend(MOON_BOSS_SLOTS)        
+        if env.options.flags.has('key_item_from_forge'):
+            potential_key_item_slots.append(RewardSlot.forge_item)
+        if env.options.flags.has('key_item_from_pink_tail'):
+            potential_key_item_slots.append(RewardSlot.pink_trade_item)
+        if miab_flags:
+            potential_key_item_slots.extend(potential_miabs)
+    # put this information in env to facilitate -exp:kicheckbonus_num
+    env.meta['number_key_item_slots'] = len(potential_key_item_slots)
     env.add_binary(BusAddress(0x21dc00), [1 if s in potential_key_item_slots else 0 for s in range(RewardSlot.MAX_COUNT)], as_script=True)
     env.add_substitution('randomizer key item count', '{:02X}'.format(rewards_assignment.count_key_items()))
 
@@ -939,7 +1191,7 @@ def apply(env):
     for slot in BOSS_SLOTS:
         boss_objective_consts.append(f'#objective.boss_{boss_assignment[slot]}')
         env.meta['available_bosses'].add(boss_assignment[slot])
-    env.add_script('patch($21f840 bus) {\n' + '\n'.join(boss_objective_consts) + '\n}')
+    env.add_script('patch($21f860 bus) {\n' + '\n'.join(boss_objective_consts) + '\n}')
 
     # remove golbez item delivery if not needed
     if (RewardSlot.fallen_golbez_item not in rewards_assignment):
@@ -957,7 +1209,7 @@ def apply(env):
     env.spoilers.add_table("KEY ITEM LOCATIONS (and Pass if Pkey)", key_item_spoilers, public=env.options.flags.has_any('-spoil:all', '-spoil:keyitems'))
 
     quest_spoilers = []
-    for slot in list(ITEM_SLOTS) + list(SUMMON_QUEST_SLOTS) + list(MOON_BOSS_SLOTS) + [RewardSlot.pink_trade_item]:
+    for slot in list(ITEM_SLOTS) + list(SUMMON_QUEST_SLOTS) + list(MOON_BOSS_SLOTS):
         if slot in rewards_assignment:
             reward = rewards_assignment[slot]
             if type(reward) is EmptyReward:

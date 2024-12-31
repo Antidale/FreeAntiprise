@@ -39,6 +39,12 @@ patch($21f790 bus) {
     // %end%
 }
 
+// One byte per character slot
+patch($21fb00 bus)
+{
+    00 00 00 00 00
+}
+
 msfpatch {
     .def CharEx__MaxAxtors              $18
 
@@ -51,6 +57,8 @@ msfpatch {
     .def CharEx__InitialStateSpellSets  $702CC0
 
     .def CharEx__AxtorBeingGiven        $7e1619
+    .def CharEx__OldestAxtorIndex       $7e1634
+    .def CharEx__OldestAxtorBuffer      $7e1636
 
     .def MaxPartySize                   $21f0ff
 }
@@ -342,6 +350,14 @@ msfpatch {
         cmp $=MaxPartySize
         bcc $+HasEmptySlot
         jmp $_Done
+// %end%
+
+// %flags: characters_force_add characters_commitment%
+    %HasEmptySlot:
+        bra $+EmptySlotSearch
+// %end%
+
+// %flags: ~characters_force_add characters_commitment%
     %HasEmptySlot:
         jmp $_DoJoinMenu
 // %end%
@@ -387,7 +403,48 @@ msfpatch {
         // return to search loop, knowing we'll find an empty slot now
         jmp $_EmptySlotSearch
 
-    %EmptySlotFound:
+    %EmptySlotFound:    
+        // check if axtor is already in party
+        ldy #$0000
+        phx
+        ldx #$0000
+        
+        
+        // Skip directly to the copy if the hero challenge is on and this is the first axtor being added
+        // %anyflags: hero_challenge superhero_challenge%
+        lda $=CharEx__AxtorBeingGiven
+        cmp $01
+        beq $+PrepForCopy        
+        // %end%
+
+        // This subroutine gets called multiple times for the same axtor, make sure to only track one that isn't a duplicate
+    %PartyCheckLoop:        
+        lda $=CharEx__OldestAxtorBuffer,x
+        cmp $=CharEx__AxtorBeingGiven
+        beq $+PrepForCopy
+        inx
+        txa
+        cmp $=MaxPartySize
+        bcc $-PartyCheckLoop
+
+        lda $_CharEx__AxtorBeingGiven        
+        ldx $_CharEx__OldestAxtorIndex
+        sta $=CharEx__OldestAxtorBuffer,x
+        inx 
+        txa
+        cmp $=MaxPartySize
+        bcc $+StoreOldest
+        
+        // Wrap back to 0 (unless hero challenge, in which case skip the first actor since that's the hero and can never be removed)
+        // %anyflags: hero_challenge superhero_challenge%
+        ldx #$0001
+        // %else%        
+        ldx #$0000
+        // %end%
+    %StoreOldest:
+        stx $_CharEx__OldestAxtorIndex
+    %PrepForCopy:
+        plx
         ldy #$0000
     %CopyLoop:
         lda $1140,y
@@ -412,12 +469,11 @@ msfpatch {
         .mx 0x20
         jsl $038006
 
-        // TODO: fill HP/MP to max?
-
+        // TODO: fill HP/MP to max?        
         // clear corresponding shadow party slot
         lda $_CharEx__AxtorBeingGiven
         jsr $_CharEx__ClearShadowPartySlot
-
+        
         // this is sadly ugly, but this pairs with
         // our randomizer features... need to set a
         // flag for successful character add (flag 0xFE)
@@ -893,14 +949,14 @@ msfpatch {
 
     %NextSpell:
         inx
-        cpy #$0138
+        cpy #$01e0
         bne $-LoopStart
 
         // copy wholesale working area to live SRAM expansion area
         phb
         rep #$20
         .mx 0x00
-        lda #$0137
+        lda #$01df
         ldx #$2300
         ldy #$_CharEx__InitialStateSpellSets
         mvn $7e, $70
@@ -1609,11 +1665,18 @@ msfpatch {
 
     .new
     CharEx__AgilityAnchorMod:
-        // %flags: ~vanilla_agility ~hero_challenge%
+        // %flags: ~vanilla_agility ~hero_challenge ~superhero_challenge%
         bra $+Accept
         // %end%
 
         // %flags: ~vanilla_agility hero_challenge%
+        lda $2000,x
+        and #$1f
+        cmp #$01
+        beq $+Accept
+        // %end%
+
+        // %flags: ~vanilla_agility superhero_challenge%
         lda $2000,x
         and #$1f
         cmp #$01
