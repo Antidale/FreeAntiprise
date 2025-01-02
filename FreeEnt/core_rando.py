@@ -755,7 +755,7 @@ def apply(env):
         magma_path_forced = None 
 
         if env.options.flags.has('key_items_unsafer'):
-            if forced_hook_route:
+            if not forced_hook_route:
                 magma_path_forced = 'moon'
             tests.append(['#item.fe_Hook', [], 'moon'])
 
