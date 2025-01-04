@@ -855,8 +855,8 @@ def check_underworld(key_items, paths_to_world, gated_paths, world_paths, scope)
 
     magma_moon = True if magma_location not in world_paths["#Overworld"] \
                          and magma_location not in world_paths["#Underworld"] else False
-    tower_key_moon = True if magma_location not in world_paths["#Overworld"] \
-                             and magma_location not in world_paths["#Underworld"] else False
+    tower_key_moon = True if tower_key_location not in world_paths["#Overworld"] \
+                             and tower_key_location not in world_paths["#Underworld"] else False
 
     damcyan_moon = True if '*[#item.DarkCrystal]' in gated_paths['#Damcyan'] else False
     mysidia_moon = True if '*[#item.DarkCrystal]' in gated_paths['#Mysidia'] else False
@@ -1013,7 +1013,9 @@ def apply(env, randomize_scope, randomize_type, testing=False):
     else:
         worlds = ["#Overworld", "#Underworld", "#Moon"]
     attempts = 0
-    while attempts < 20:
+    while True:
+        if attempts >= 200:
+            return False
         shuffled_entrances = []
         shuffled_exits = []
         spoil_entrances = []
