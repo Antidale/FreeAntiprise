@@ -1,3 +1,5 @@
+[TOC]
+
 ## Cspells:anti
 ### Character Spell List changes
 Rosa
