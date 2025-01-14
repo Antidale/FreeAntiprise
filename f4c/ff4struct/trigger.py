@@ -4,6 +4,7 @@ EVENT = 1
 TREASURE = 2
 TELEPORT = 3
 
+treasureIdx=0
 class Trigger:
     def __init__(self):
         self.x = 0
@@ -19,13 +20,23 @@ class Trigger:
         self.target_y = 0
         self.target_facing = 0
 
-    def encode(self):
-        encoding = [self.x, self.y, 0, 0, 0]
+    def __repr__(self):        
+        if self.type == 1:
+            str_result = f'Event'
+        elif self.type == 2:
+            str_result = f'Treasure {self.item}'
+            str_result += ' ' + ('fight' if self.is_miab else '')
+        else:
+            str_result = f'Teleport'
+        return str_result
 
+    def encode(self):
+        encoding = [self.x, self.y, 0, 0, 0]        
         if self.type == EVENT:
             encoding[2] = 0xFF
             encoding[3] = self.event_call
         elif self.type == TREASURE:
+            #print(f'Encoded trigger into map {self.map} {self.x},{self.y}')
             encoding[2] = 0xFE
             encoding[3] = pack_byte('6bb', self.formation, self.is_miab, (self.item is not None))
             if self.item is not None:
@@ -83,4 +94,5 @@ def encode_set(trigger_set):
     encoding = []
     for t in trigger_set:
         encoding.extend(t.encode())
+    #print(f"Encoded set {trigger_set}")
     return encoding

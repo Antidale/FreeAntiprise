@@ -376,6 +376,7 @@ class FlagLogicCore:
         for flag in flags_to_disable:
             if flagset.has(flag):
                 flagset.unset(flag)
+                print(prefix + '; removed ' + flag)
                 self._lib.push(log, ['correction', prefix + '; removed ' + flag])
 
     def _simple_disable_regex(self, flagset, log, prefix, flags_regex):
@@ -387,15 +388,53 @@ class FlagLogicCore:
     def fix(self, flagset):
         log = []
 
-        # NOTE: mutex flags ARE handled internally by FlagSet, don't worry about them here
-
+        # NOTE: mutex flags ARE handled internally by FlagSet, don't worry about them here        
         # key item flags
-        if flagset.has_any('Ksummon', 'Kmoon', 'Kmiab') and not flagset.has('Kmain'):
+        if flagset.has('Kunsafer') and not flagset.has('Kmoon'):
+            flagset.set('Kmoon')
+            self._lib.push(log, ['correction', 'Kunsafer requires placing key items on the moon; adding Kmoon'])
+
+        if flagset.has('Kforge') and flagset.has('Omode:classicforge'):
+            self._simple_disable(flagset, log, 'Classic forge is incompatible with Kforge', ['Kforge'])
+
+        if flagset.has('Kforge'):
+            self._simple_disable_regex(flagset, log, '-smith is incompatible with Kforge', r'^-smith:')
+
+        if flagset.has_any('Ksummon', 'Kmoon', 'Kforge', 'Kpink',
+                           'Kmiab:standard', 'Kmiab:above', 'Kmiab:below', 'Kmiab:lst',
+                           'Kmiab:all') and not flagset.has('Kmain'):
             flagset.set('Kmain')
             self._lib.push(log, ['correction', 'Advanced key item randomizations are enabled; forced to add Kmain'])
+        kmiab_flags = flagset.get_list(r'^Kmiab:')
+
+        if flagset.has('Owin:crystal') and flagset.has('Omode:ki17'):
+            flagset.unset('Omode:ki17')
+            flagset.set('Omode:ki16')
+            self._lib.push(log, ['correction', 'Can only collect 16 KIs for an objective with Owin:crystal; changing Omode:ki17 to Omode:ki16'])
+
+        if not flagset.has_any('Ksummon', 'Kmoon', 'Kforge', 'Kpink',
+                           'Kmiab:standard', 'Kmiab:above', 'Kmiab:below', 'Kmiab:lst',
+                           'Kmiab:all') and flagset.has('Omode:ki17'):
+            self._simple_disable(flagset, log, 'Cannot replace a key item if all of them are required', ['Pkey', 'Kstart:pass'])
 
         if flagset.has('Kvanilla'):
-            self._simple_disable(flagset, log, 'Key items not randomized', ['Kunsafe'])
+            self._simple_disable(flagset, log, 'Key items not randomized', ['Kunsafe', 'Kunsafer','Kunweighted'])
+            self._simple_disable_regex(flagset, log, 'Key items not randomized', r'^Kstart:')        
+
+        if flagset.has('Kstart:darkness'):
+            self._simple_disable(flagset, log, 'Klatedark is incompatible with starting with Darkness', ['Klatedark'])
+
+        if flagset.has('Klatedark'):
+            self._simple_disable(flagset, log, 'Klatedark implicitly guarantees safe underground access', ['Kunsafe', 'Kunsafer'])
+
+        if flagset.has('Kstart:pass') and not flagset.has('Pkey'):
+            flagset.set('Pkey')
+            self._lib.push(log, ['correction', 'Kstart:pass implies Pkey'])
+
+        if 'Kmiab:all' in kmiab_flags and len(kmiab_flags) > 1:
+            self._simple_disable_regex(flagset, log, 'All miabs already included', r'^Kmiab:(standard|above|below|lst)')
+        elif 'Kmiab:standard' in kmiab_flags and len(kmiab_flags) > 1:
+            self._simple_disable_regex(flagset, log, 'Standard miab inclusion takes priority', r'^Kmiab:(above|below|lst)')
 
         if flagset.has('Cvanilla'):
             self._simple_disable_regex(flagset, log, 'Characters not randomized', r'^C(maybe|distinct:|only:|no:)')
@@ -406,7 +445,7 @@ class FlagLogicCore:
 
         if flagset.has('Chero'):
             self._simple_disable_regex(flagset, log, 'Hero challenge includes smith weapon', r'^-smith:')
-
+        
         start_include_flags = flagset.get_list(r'^Cstart:(?!not_)')
         start_exclude_flags = flagset.get_list(r'^Cstart:not_')
         if len(start_exclude_flags) > 0 and len(start_include_flags) > 0:
@@ -414,11 +453,41 @@ class FlagLogicCore:
         if len(start_include_flags) > 1 and flagset.has('Cstart:any'):
             self._simple_disable_regex(flagset, log, 'Cstart:any is specified', r'^Cstart:(?!any|not_)')
 
+        if flagset.has('Kstart:magma') and flagset.has('Kforce:hook'):
+            self._simple_disable_regex(flagset, log, 'Force hook with start:Magma', r'^Kforce:hook')
+        if flagset.has('Cnekkie') and len(flagset.get_list(r'^Cthrift:')) > 0:
+            self._simple_disable_regex(flagset, log, 'Starting gear specified by Cnekkie', r'^Cthrift:')
+
+        if  (flagset.has('Ctreasure:unsafe') or flagset.has('Ctreasure:relaxed')) and not (flagset.has('Ctreasure:free') or flagset.has('Ctreasure:earned')):
+            flagset.set('Ctreasure:free')
+            flagset.set('Ctreasure:earned')
+            self._lib.push(log, ['correction', 'Ctreasure:unsafe/wild set, auto-assigning Ctreasure:free and Ctreasure:earned'])            
+
+        if flagset.get_list(r'^Ctreasure:') and (flagset.has('Tvanilla') or flagset.has('Tshuffle') or flagset.has('Tempty')):
+            self._simple_disable_regex(flagset, log, 'Ctreasure: with vanilla-ish or empty chests', r'^Ctreasure:')
+
+        if flagset.has('Ctreasure:earned'):                            
+            flagset.set('Cnoearned')
+            self._lib.push(log, ['correction', 'Ctreasure:earned set, auto-assigning Cnoearned'])
+        
+        if flagset.has('Ctreasure:free'):                            
+            flagset.set('Cnofree')
+            self._lib.push(log, ['correction', 'Ctreasure:free set, auto-assigning Cnofree'])        
+
         if flagset.has('Tempty'):
             self._simple_disable_regex(flagset, log, 'Treasures are empty', r'^Tsparse:')
 
+        if flagset.get_list(r'^Tsparse:') and not flagset.get_list(r'^Tsparsey:'):
+            flagset.set('Tsparsey:overworld')
+            flagset.set('Tsparsey:underground')
+            flagset.set('Tsparsey:moon')
+
+        if flagset.get_list(r'^Tsparsey:') and not flagset.get_list(r'^Tsparse:'):
+            self._simple_disable_regex(flagset, log, 'Tsparsey specified without Tsparse', r'^Tsparsey:')            
+
         if flagset.has_any('Tempty', 'Tvanilla', 'Tshuffle'):
             self._simple_disable_regex(flagset, log, 'Treasures are not random', r'^Tmaxtier:')
+            self._simple_disable_regex(flagset, log, 'Treasures are not random', r'^Tmintier:')
 
         if flagset.has_any('Svanilla', 'Scabins', 'Sempty'):
             self._simple_disable_regex(flagset, log, 'Shops are not random', r'^Sno:([^j]|j.)')
@@ -429,25 +498,98 @@ class FlagLogicCore:
 
         if flagset.has('Bvanilla'):
             self._simple_disable(flagset, log, 'Bosses not randomized', ['Bunsafe'])
+            self._simple_disable_regex(flagset, log, 'Bosses not randomized', r'^Brestrict:')
 
         if flagset.has('Evanilla'):
             self._simple_disable(flagset, log, 'Encounters are vanilla', ['Ekeep:behemoths', 'Ekeep:doors', 'Edanger'])
+
+        if len(flagset.get_list(r'^-smith:playable')) == len(flagset.get_list(r'^-smith:')):
+            self._simple_disable(flagset, log, 'No smith item requested', ['-smith:playable'])
+
+        if flagset.has('-monsterflee') and not flagset.has('-monsterevade'):
+            flagset.set('-monsterevade')
+            self._lib.push(log, ['correction', 'Monsters require evade to flee; forced to add -monsterevade'])
+
+        if flagset.has_any('-entrancesrando:normal','-entrancesrando:gated','-entrancesrando:blueplanet','-entrancesrando:why','-entrancesrando:all'):
+            self._simple_disable_regex(flagset, log, 'Entrances rando takes priority', r'^-doorsrando')
+
+        if not flagset.has_any('-entrancesrando:normal','-entrancesrando:gated','-entrancesrando:blueplanet',
+                               '-entrancesrando:why','-entrancesrando:all','-doorsrando:normal','-doorsrando:gated',
+                               '-doorsrando:blueplanet','-doorsrando:why','-doorsrando:all'):
+            self._simple_disable(flagset, log, 'Removing doors rando related flags when no doors/entrances option is enabled ', ['-calmness','-forcesealed'])
+
+
+
+        if flagset.has_any('-entrancesrando:normal','-entrancesrando:gated','-entrancesrando:blueplanet','-entrancesrando:why','-entrancesrando:all'):
+            self._simple_disable_regex(flagset, log, 'Entrances rando takes priority', r'^-doorsrando')
+
+        if not flagset.has_any('-entrancesrando:normal','-entrancesrando:gated','-entrancesrando:blueplanet',
+                               '-entrancesrando:why','-entrancesrando:all','-doorsrando:normal','-doorsrando:gated',
+                               '-doorsrando:blueplanet','-doorsrando:why','-doorsrando:all'):
+            self._simple_disable(flagset, log, 'Removing doors rando related flags when no doors/entrances option is enabled ', ['-calmness','-forcesealed'])
+
+        if flagset.has('-z:physical') and flagset.has('-z:whichbang'):
+            self._simple_disable(flagset, log, 'No guaranteed Big Bangs in script', ['-z:whichbang'])
+
+        if flagset.has_any('-z:chaos', '-z:lavosshell') and flagset.has('-z:phaseshift'):
+            self._simple_disable(flagset, log, 'Random phases take precedence over shuffled phases', ['-z:phaseshift'])
+
+        # add in a couple other restrictions about Z fight stuff
 
         all_spoiler_flags = flagset.get_list(r'^-spoil:')
         sparse_spoiler_flags = flagset.get_list(r'^-spoil:sparse')
         if (len(all_spoiler_flags) > 0 and len(all_spoiler_flags) == len(sparse_spoiler_flags)):
             self._simple_disable_regex(flagset, log, 'No spoilers requested', r'^-spoil:sparse')
 
+        if flagset.has('Chi') and flagset.has('Chero') and flagset.has('Cparty:1'):  
+            self._simple_disable(flagset, log, 'No room for characters to be added with Chero and Max Party size of 1', ['Chi'])
+
+        if flagset.has('Cfifo') and flagset.has('Chero') and flagset.has('Cparty:1'):  
+            self._simple_disable(flagset, log, 'Cant remove characters with Chero and Max Party size of 1', ['Cfifo'])
+
+        if flagset.has('Cpermajoin') and flagset.has('Cfifo'):
+            self._simple_disable(flagset, log, 'Permajoin and Remove Oldest are incompatible', ['Cfifo'])
+
+
         # Objectives logic
         if flagset.has('Onone'):
             self._simple_disable_regex(flagset, log, 'No objectives set', r'^O(win|req):')
+            self._simple_disable_regex(flagset, log, 'No objectives set', r'^-exp:objectivebonus')
         else:
             # Force Oreq:all if a req: flag is not specified
             if not flagset.get_list(r'^Oreq:'):
                 flagset.set('Oreq:all')
                 self._lib.push(log, ['correction', 'Required number of objectives not specified; setting Oreq:all'])
 
+            hard_required_objectives = flagset.get_list(r'^Ohardreq:')
+            if flagset.has('Oreq:all'):                
+                if len(hard_required_objectives) != 0:
+                    self._simple_disable_regex(flagset, log, 'Hard required objectives found, but all objectives are already required. Removing hard required flags', r'^Ohardreq:')
+                    self._lib.push(log, ['correction', 'Hard required objectives found, but all objectives are already required.  Ignoring hard required flags.'])                    
+            else:
+                required_count = flagset.get_list(r'^Oreq:')
+                if len(required_count ) > 0 :
+                    required_objective_count = int(self._lib.re_sub(r'^Oreq:', '', required_count[0]))
+                    if len(hard_required_objectives) > required_objective_count:
+                        self._simple_disable_regex(flagset, log, 'Changing required count', r'^Oreq:')
+                        flagset.set(f'Oreq:{len(hard_required_objectives)}')
+                        self._lib.push(log, ['correction', 'More hard required objectives set than number of objectives required, increasing required objective count to {len(hard_required_objectives)}.'])
+
+            gated_objectives = flagset.get_list(r'^Ogated:')
+            for gated in gated_objectives:
+                gated_objective_index = int(self._lib.re_sub(r'^Ogated:', '', gated))
+                bad_gated_conditions = False
+                for hardreq in hard_required_objectives:
+                    hard_required_index = int(self._lib.re_sub(r'^Ohardreq:', '', hardreq))
+                    if hard_required_index == gated_objective_index:
+                        bad_gated_conditions = True
+                        self._lib.push(log, ['error', f'Cannot have objective #{hard_required_index} be both gated AND hard required.'])
+                        break
+                if bad_gated_conditions:
+                    break
+
             win_flags = flagset.get_list(r'^Owin:')
+          
             # Force Owin:crystal if classicforge, otherwise force Owin:game if no win result specified
             if flagset.has('Omode:classicforge') and not flagset.has('Owin:crystal'):
                 flagset.set('Owin:crystal')
@@ -455,7 +597,7 @@ class FlagLogicCore:
             elif len(win_flags) == 0:
                 flagset.set('Owin:game')
                 self._lib.push(log, ['correction', 'Objectives set without outcome specified; added Owin:game'])
-
+                   
             # force Pkey if pass objective is set
             pass_quest_flags = flagset.get_list(r'^O\d+:quest_pass$')
             if len(pass_quest_flags) > 0 and flagset.has('Pnone'):
@@ -508,16 +650,137 @@ class FlagLogicCore:
                             self._lib.push(log, ['error', "More character objectives are set than distinct characters allowed in the randomization."])
 
                 if flagset.has('Cnofree') and flagset.has('Cnoearned'):
-                    self._lib.push(log, ['error', "Character objectives are set while no character slots will be filled"])
-
-            if flagset.has('Orandom:char') and flagset.has('Cnoearned') and flagset.has('Cnofree'):
-                flagset.unset('Orandom:char')
-                self._lib.push(log, ['correction', 'Random character objectives in the pool while no character slots will be filled. Removed Orandom:char.'])
+                    self._lib.push(log, ['error', "Character objectives are set while no character slots will be filled"])                           
+            
+            for random_prefix in ['Orandom:char', 'Orandom2:char', 'Orandom3:char']:    
+                if flagset.has(random_prefix) and flagset.has('Cnoearned') and flagset.has('Cnofree') and not flagset.has('Ctreasure:free') and not flagset.has('Ctreasure:earned'):
+                    flagset.unset(random_prefix)
+                    self._lib.push(log, ['correction', f'Random character objectives in the pool while no character slots will be filled. Removed {random_prefix}.'])
                     
             # remove random quest type specifiers if no random objectives specified
-            if not flagset.get_list(r'^Orandom:\d'):
-                self._simple_disable_regex(flagset, log, 'No random objectives specified', r'^Orandom:[^\d]')
+            for random_prefix in ['Orandom:', 'Orandom2:', 'Orandom3:']:
+                if not flagset.get_list(rf'^{random_prefix}\d'):
+                    self._simple_disable_regex(flagset, log, f'No random objectives specified for pool {random_prefix}', rf'^{random_prefix}[^\d]')
 
+            total_potential_bosses = 0
+            total_objective_count = 0
+            for random_prefix in ['Orandom:', 'Orandom2:', 'Orandom3:']:
+                if not flagset.get_list(rf'^{random_prefix}'):
+                    continue
+                all_customized_random_flags = flagset.get_list(rf'^{random_prefix}[^\d]')
+                num_random_objectives = flagset.get_list(rf'^{random_prefix}\d')
+                if len(num_random_objectives) == 0:
+                    continue
+
+                flag_suffix = self._lib.re_sub(rf'^{random_prefix}', '', num_random_objectives[0])
+                if len(all_customized_random_flags) == 0 or f'{random_prefix}boss' in all_customized_random_flags:                                        
+                    total_potential_bosses += int(flag_suffix)
+                total_objective_count += int(flag_suffix)
+            specific_boss_objectives = flagset.get_list(rf'^O[\d]:boss_')
+            all_specific_objectives = flagset.get_list(rf'^O[\d]:')
+            total_potential_bosses += len(specific_boss_objectives)
+            total_objective_count += len(all_specific_objectives)
+            if flagset.has('Omode:fiends'):
+                total_potential_bosses += 6
+                total_objective_count += 6
+            if flagset.has('Omode:classicforge'):
+                total_objective_count += 1
+            if flagset.has('Omode:classicgiant'):
+                total_objective_count += 1
+            if len(flagset.get_list(r'^Omode:dkmatter')) > 0:
+                total_objective_count += 1
+
+            if total_potential_bosses > 34:
+                self._lib.push(log, ['error', "More than 34 potential bosses specified"])                           
+            if total_objective_count > 32:
+                self._lib.push(log, ['error', "More than 32 objectives specified"])                           
+            #print(f'Total potential bosses is {total_potential_bosses} Objectives is {total_objective_count}')            
+
+            # test if # of random req quests exceeds the random only characters count
+            # test if the total amount of avail chararcters exceeds the required_character_count
+            duplicate_check_count = 0
+            character_pool = []
+            for random_prefix in ['Orandom:', 'Orandom2:', 'Orandom3:']:                         
+                if len(flagset.get_list(rf'^{random_prefix}')) == 0:
+                    continue
+
+                random_only_char_flags = flagset.get_list(rf'{random_prefix}only')
+                if not flagset.has(f'{random_prefix}char') and len(random_only_char_flags) > 0:
+                    flagset.set(f'{random_prefix}char')
+                    self._lib.push(log, ['correction', f'Random objectives requiring specific characters set without Orandom:char; setting {random_prefix}char'])
+
+                all_customized_random_flags = flagset.get_list(rf'^{random_prefix}[^\d]')
+                if len(all_customized_random_flags) != 0 and f'{random_prefix}char'not in all_customized_random_flags:
+                    continue
+
+                all_random_flags = flagset.get_list(rf'^{random_prefix}')                
+                skip_pools = False
+                
+                for random_flag in all_random_flags:
+                    flag_suffix = self._lib.re_sub(rf'^{random_prefix}', '', random_flag)
+                    if self._lib.re_test(r'\d', flag_suffix):
+                        required_objective_count = int(flag_suffix)
+                    elif not self._lib.re_test(r'only', flag_suffix) and not self._lib.re_test(r'char', flag_suffix):
+                        skip_pools = True
+                        break
+                                
+                duplicate_char_count = 0
+                desired_char_count = 0
+                if len(random_only_char_flags) > 0 and len(random_only_char_flags) < required_objective_count:
+                    self._lib.push(log, ['error', f'Random objectives requiring less specific characters ({len(random_only_char_flags)}) than number of objectives ({required_objective_count})'])
+                    break
+                elif len(random_only_char_flags) > 0 :
+                    for random_flag in random_only_char_flags:
+                        desired_char_count += 1
+                        current_char = random_flag[len(f'{random_prefix}only'):]
+                        if current_char not in character_pool:
+                            self._lib.push(character_pool, current_char)
+                        else:
+                            duplicate_char_count+=1
+                else:
+                    all_character_pool = ['cecil', 'kain', 'rydia', 'edward', 'tellah', 'rosa', 'yang', 'palom', 'porom', 'cid', 'edge', 'fusoya']
+                    desired_char_count = len(all_character_pool)
+                    for current_char in all_character_pool:
+                        if current_char not in character_pool:
+                            self._lib.push(character_pool, current_char)
+                        else:
+                            duplicate_char_count+=1
+                chars_to_remove = duplicate_check_count                
+                if duplicate_char_count < duplicate_check_count:
+                    chars_to_remove = duplicate_char_count
+                actual_available_characters = desired_char_count - chars_to_remove
+                #print (f'actual_available_characters {actual_available_characters} desired_char_count {desired_char_count} chars_to_remove {chars_to_remove} duplicate_char_count {duplicate_char_count} duplicate_check_count {duplicate_check_count}')
+                if actual_available_characters < required_objective_count and skip_pools == False:
+                    self._lib.push(log, ['error', f'Not enough unique characters for pool {random_prefix}.  Another pool could potentially consume some or all of these characters {random_only_char_flags}' + ','.join(flagset.get_list(rf'^{random_prefix}'))])
+                    break
+                duplicate_check_count += required_objective_count
+                
+        challenges = flagset.get_list(r'^-wacky:')
+        if challenges:
+            # Simplified wacky compatibility logic
+            # If one of these is set, none of the others in this group can be
+            WACKY_SET_1 = ['afflicted', 'menarepigs', 'mirrormirror', 'skywarriors', 'zombies']
+            # If one of the above is set, none of these can be
+            WACKY_SET_2 = ['battlescars', 'payablegolbez', 'tellahmaneuver', 'worthfighting']
+            # These are sets of mutually incompatible modes
+            WACKY_SET_3 = [
+                ['3point', 'afflicted', 'battlescars', 'menarepigs', 'mirrormirror', 'skywarriors', 'unstackable', 'zombies'],
+                ['afflicted', 'friendlyfire'],
+                ['battlescars', 'afflicted', 'zombies', 'worthfighting'],
+                ['darts', 'musical'],
+                ['3point', 'tellahmaneuver'],
+            ]
+
+            for c in challenges:
+                mode = self._lib.re_sub(r'-wacky:', '', c)
+                if mode in WACKY_SET_1:
+                    self._simple_disable(flagset, log, 'Can only have one enforced status wacky mode', [fr'-wacky:{m}' for m in WACKY_SET_1 if m != mode])
+                    self._simple_disable(flagset, log, 'Modes are incompatible with enforced status wacky modes', [fr'-wacky:{m}' for m in WACKY_SET_2])
+                for group in WACKY_SET_3:
+                    if mode in group:
+                        self._simple_disable(flagset, log, f'Wacky modes are incompatible with {mode}', [fr'-wacky:{m}' for m in group if m != mode])
+                    
+        
         return log
 
 

@@ -428,6 +428,7 @@ class FlagLogicCore {
             flag = _pj_a[_pj_c];
             if (flagset.has(flag)) {
                 flagset.unset(flag);
+                console.log(((prefix + "; removed ") + flag));
                 this._lib.push(log, ["correction", ((prefix + "; removed ") + flag)]);
             }
         }
@@ -436,14 +437,54 @@ class FlagLogicCore {
         this._simple_disable(flagset, log, prefix, flagset.get_list(flags_regex));
     }
     fix(flagset) {
-        var all_spoiler_flags, ch, char_objective_flags, distinct_count, distinct_flags, has_unavailable_characters, log, only_flags, pass_quest_flags, pool, required_chars, sparse_spoiler_flags, start_exclude_flags, start_include_flags, win_flags;
+        var WACKY_SET_1, WACKY_SET_2, WACKY_SET_3, actual_available_characters, all_character_pool, all_customized_random_flags, all_random_flags, all_specific_objectives, all_spoiler_flags, bad_gated_conditions, ch, challenges, char_objective_flags, character_pool, chars_to_remove, current_char, desired_char_count, distinct_count, distinct_flags, duplicate_char_count, duplicate_check_count, flag_suffix, gated_objective_index, gated_objectives, hard_required_index, hard_required_objectives, has_unavailable_characters, kmiab_flags, log, mode, num_random_objectives, only_flags, pass_quest_flags, pool, random_only_char_flags, required_chars, required_count, required_objective_count, skip_pools, sparse_spoiler_flags, specific_boss_objectives, start_exclude_flags, start_include_flags, total_objective_count, total_potential_bosses, win_flags;
         log = [];
-        if ((flagset.has_any("Ksummon", "Kmoon", "Kmiab") && (! flagset.has("Kmain")))) {
+        if ((flagset.has("Kunsafer") && (! flagset.has("Kmoon")))) {
+            flagset.set("Kmoon");
+            this._lib.push(log, ["correction", "Kunsafer requires placing key items on the moon; adding Kmoon"]);
+        }
+        if ((flagset.has("Kforge") && flagset.has("Omode:classicforge"))) {
+            this._simple_disable(flagset, log, "Classic forge is incompatible with Kforge", ["Kforge"]);
+        }
+        if (flagset.has("Kforge")) {
+            this._simple_disable_regex(flagset, log, "-smith is incompatible with Kforge", "^-smith:");
+        }
+        kmiab_flags = flagset.get_list("^Kmiab:");
+        if ((flagset.has_any("Ksummon", "Kmoon", "Kforge", "Kpink", "Kmiab:standard", "Kmiab:above", "Kmiab:below", "Kmiab:lst", "Kmiab:all") && (! flagset.has("Kmain")))) {
             flagset.set("Kmain");
             this._lib.push(log, ["correction", "Advanced key item randomizations are enabled; forced to add Kmain"]);
         }
+        if ((flagset.has("Owin:crystal") && flagset.has("Omode:ki17"))) {
+            flagset.unset("Omode:ki17");
+            flagset.set("Omode:ki16");
+            this._lib.push(log, ["correction", "Can only collect 16 KIs for an objective with Owin:crystal; changing Omode:ki17 to Omode:ki16"]);
+        }
+        if (((! flagset.has_any("Ksummon", "Kmoon", "Kforge", "Kpink", "Kmiab:standard", "Kmiab:above", "Kmiab:below", "Kmiab:lst", "Kmiab:all")) && flagset.has("Omode:ki17"))) {
+            this._simple_disable(flagset, log, "Cannot replace a key item if all of them are required", ["Pkey", "Kstart:pass"]);
+        }
         if (flagset.has("Kvanilla")) {
-            this._simple_disable(flagset, log, "Key items not randomized", ["Kunsafe"]);
+            this._simple_disable(flagset, log, "Key items not randomized", ["Kunsafe", "Kunsafer", "Kunweighted"]);
+            this._simple_disable_regex(flagset, log, "Key items not randomized", "^Kstart:");
+        }
+        if ((flagset.has("Kmiab:lst") && flagset.has_any("Kmoon", "Kunsafe"))) {
+            this._simple_disable(flagset, log, "LST miabs already included", ["Kmiab:lst"]);
+        }
+        if (flagset.has("Kstart:darkness")) {
+            this._simple_disable(flagset, log, "Klatedark is incompatible with starting with Darkness", ["Klatedark"]);
+        }
+        if (flagset.has("Klatedark")) {
+            this._simple_disable(flagset, log, "Klatedark implicitly guarantees safe underground access", ["Kunsafe", "Kunsafer"]);
+        }
+        if ((flagset.has("Kstart:pass") && (! flagset.has("Pkey")))) {
+            flagset.set("Pkey");
+            this._lib.push(log, ["correction", "Kstart:pass implies Pkey"]);
+        }
+        if ((_pj.in_es6("Kmiab:all", kmiab_flags) && (kmiab_flags.length > 1))) {
+            this._simple_disable_regex(flagset, log, "All miabs already included", "^Kmiab:(standard|above|below|lst)");
+        } else {
+            if ((_pj.in_es6("Kmiab:standard", kmiab_flags) && (kmiab_flags.length > 1))) {
+                this._simple_disable_regex(flagset, log, "Standard miab inclusion takes priority", "^Kmiab:(above|below|lst)");
+            }
         }
         if (flagset.has("Cvanilla")) {
             this._simple_disable_regex(flagset, log, "Characters not randomized", "^C(maybe|distinct:|only:|no:)");
@@ -464,11 +505,42 @@ class FlagLogicCore {
         if (((start_include_flags.length > 1) && flagset.has("Cstart:any"))) {
             this._simple_disable_regex(flagset, log, "Cstart:any is specified", "^Cstart:(?!any|not_)");
         }
+        if ((flagset.has("Kstart:magma") && flagset.has("Kforce:hook"))) {
+            this._simple_disable_regex(flagset, log, "Force hook with start:Magma", "^Kforce:hook");
+        }
+        if ((flagset.has("Cnekkie") && (flagset.get_list("^Cthrift:").length > 0))) {
+            this._simple_disable_regex(flagset, log, "Starting gear specified by Cnekkie", "^Cthrift:");
+        }
+        if (((flagset.has("Ctreasure:unsafe") || flagset.has("Ctreasure:relaxed")) && (! (flagset.has("Ctreasure:free") || flagset.has("Ctreasure:earned"))))) {
+            flagset.set("Ctreasure:free");
+            flagset.set("Ctreasure:earned");
+            this._lib.push(log, ["correction", "Ctreasure:unsafe/wild set, auto-assigning Ctreasure:free and Ctreasure:earned"]);
+        }
+        if ((flagset.get_list("^Ctreasure:") && ((flagset.has("Tvanilla") || flagset.has("Tshuffle")) || flagset.has("Tempty")))) {
+            this._simple_disable_regex(flagset, log, "Ctreasure: with vanilla-ish or empty chests", "^Ctreasure:");
+        }
+        if (flagset.has("Ctreasure:earned")) {
+            flagset.set("Cnoearned");
+            this._lib.push(log, ["correction", "Ctreasure:earned set, auto-assigning Cnoearned"]);
+        }
+        if (flagset.has("Ctreasure:free")) {
+            flagset.set("Cnofree");
+            this._lib.push(log, ["correction", "Ctreasure:free set, auto-assigning Cnofree"]);
+        }
         if (flagset.has("Tempty")) {
             this._simple_disable_regex(flagset, log, "Treasures are empty", "^Tsparse:");
         }
+        if ((flagset.get_list("^Tsparse:") && (! flagset.get_list("^Tsparsey:")))) {
+            flagset.set("Tsparsey:overworld");
+            flagset.set("Tsparsey:underground");
+            flagset.set("Tsparsey:moon");
+        }
+        if ((flagset.get_list("^Tsparsey:") && (! flagset.get_list("^Tsparse:")))) {
+            this._simple_disable_regex(flagset, log, "Tsparsey specified without Tsparse", "^Tsparsey:");
+        }
         if (flagset.has_any("Tempty", "Tvanilla", "Tshuffle")) {
             this._simple_disable_regex(flagset, log, "Treasures are not random", "^Tmaxtier:");
+            this._simple_disable_regex(flagset, log, "Treasures are not random", "^Tmintier:");
         }
         if (flagset.has_any("Svanilla", "Scabins", "Sempty")) {
             this._simple_disable_regex(flagset, log, "Shops are not random", "^Sno:([^j]|j.)");
@@ -479,21 +551,92 @@ class FlagLogicCore {
         }
         if (flagset.has("Bvanilla")) {
             this._simple_disable(flagset, log, "Bosses not randomized", ["Bunsafe"]);
+            this._simple_disable_regex(flagset, log, "Bosses not randomized", "^Brestrict:");
         }
         if (flagset.has("Evanilla")) {
             this._simple_disable(flagset, log, "Encounters are vanilla", ["Ekeep:behemoths", "Ekeep:doors", "Edanger"]);
+        }
+        if ((flagset.get_list("^-smith:playable").length === flagset.get_list("^-smith:").length)) {
+            this._simple_disable(flagset, log, "No smith item requested", ["-smith:playable"]);
+        }
+        if ((flagset.has("-monsterflee") && (! flagset.has("-monsterevade")))) {
+            flagset.set("-monsterevade");
+            this._lib.push(log, ["correction", "Monsters require evade to flee; forced to add -monsterevade"]);
+        }
+        if (flagset.has_any("-entrancesrando:normal", "-entrancesrando:gated", "-entrancesrando:blueplanet", "-entrancesrando:why", "-entrancesrando:all")) {
+            this._simple_disable_regex(flagset, log, "Entrances rando takes priority", "^-doorsrando");
+        }
+        if ((! flagset.has_any("-entrancesrando:normal", "-entrancesrando:gated", "-entrancesrando:blueplanet", "-entrancesrando:why", "-entrancesrando:all", "-doorsrando:normal", "-doorsrando:gated", "-doorsrando:blueplanet", "-doorsrando:why", "-doorsrando:all"))) {
+            this._simple_disable(flagset, log, "Removing doors rando related flags when no doors/entrances option is enabled ", ["-calmness", "-forcesealed"]);
+        }
+        if (flagset.has_any("-entrancesrando:normal", "-entrancesrando:gated", "-entrancesrando:blueplanet", "-entrancesrando:why", "-entrancesrando:all")) {
+            this._simple_disable_regex(flagset, log, "Entrances rando takes priority", "^-doorsrando");
+        }
+        if ((! flagset.has_any("-entrancesrando:normal", "-entrancesrando:gated", "-entrancesrando:blueplanet", "-entrancesrando:why", "-entrancesrando:all", "-doorsrando:normal", "-doorsrando:gated", "-doorsrando:blueplanet", "-doorsrando:why", "-doorsrando:all"))) {
+            this._simple_disable(flagset, log, "Removing doors rando related flags when no doors/entrances option is enabled ", ["-calmness", "-forcesealed"]);
+        }
+        if ((flagset.has("-z:physical") && flagset.has("-z:whichbang"))) {
+            this._simple_disable(flagset, log, "No guaranteed Big Bangs in script", ["-z:whichbang"]);
+        }
+        if ((flagset.has_any("-z:chaos", "-z:lavosshell") && flagset.has("-z:phaseshift"))) {
+            this._simple_disable(flagset, log, "Random phases take precedence over shuffled phases", ["-z:phaseshift"]);
         }
         all_spoiler_flags = flagset.get_list("^-spoil:");
         sparse_spoiler_flags = flagset.get_list("^-spoil:sparse");
         if (((all_spoiler_flags.length > 0) && (all_spoiler_flags.length === sparse_spoiler_flags.length))) {
             this._simple_disable_regex(flagset, log, "No spoilers requested", "^-spoil:sparse");
         }
+        if (((flagset.has("Chi") && flagset.has("Chero")) && flagset.has("Cparty:1"))) {
+            this._simple_disable(flagset, log, "No room for characters to be added with Chero and Max Party size of 1", ["Chi"]);
+        }
+        if (((flagset.has("Cfifo") && flagset.has("Chero")) && flagset.has("Cparty:1"))) {
+            this._simple_disable(flagset, log, "Cant remove characters with Chero and Max Party size of 1", ["Cfifo"]);
+        }
+        if ((flagset.has("Cpermajoin") && flagset.has("Cfifo"))) {
+            this._simple_disable(flagset, log, "Permajoin and Remove Oldest are incompatible", ["Cfifo"]);
+        }
         if (flagset.has("Onone")) {
             this._simple_disable_regex(flagset, log, "No objectives set", "^O(win|req):");
+            this._simple_disable_regex(flagset, log, "No objectives set", "^-exp:objectivebonus");
         } else {
             if ((! flagset.get_list("^Oreq:"))) {
                 flagset.set("Oreq:all");
                 this._lib.push(log, ["correction", "Required number of objectives not specified; setting Oreq:all"]);
+            }
+            hard_required_objectives = flagset.get_list("^Ohardreq:");
+            if (flagset.has("Oreq:all")) {
+                if ((hard_required_objectives.length !== 0)) {
+                    this._simple_disable_regex(flagset, log, "Hard required objectives found, but all objectives are already required. Removing hard required flags", "^Ohardreq:");
+                    this._lib.push(log, ["correction", "Hard required objectives found, but all objectives are already required.  Ignoring hard required flags."]);
+                }
+            } else {
+                required_count = flagset.get_list("^Oreq:");
+                if ((required_count.length > 0)) {
+                    required_objective_count = Number.parseInt(this._lib.re_sub("^Oreq:", "", required_count[0]));
+                    if ((hard_required_objectives.length > required_objective_count)) {
+                        this._simple_disable_regex(flagset, log, "Changing required count", "^Oreq:");
+                        flagset.set(`Oreq:${hard_required_objectives.length}`);
+                        this._lib.push(log, ["correction", "More hard required objectives set than number of objectives required, increasing required objective count to {len(hard_required_objectives)}."]);
+                    }
+                }
+            }
+            gated_objectives = flagset.get_list("^Ogated:");
+            for (var gated, _pj_c = 0, _pj_a = gated_objectives, _pj_b = _pj_a.length; (_pj_c < _pj_b); _pj_c += 1) {
+                gated = _pj_a[_pj_c];
+                gated_objective_index = Number.parseInt(this._lib.re_sub("^Ogated:", "", gated));
+                bad_gated_conditions = false;
+                for (var hardreq, _pj_f = 0, _pj_d = hard_required_objectives, _pj_e = _pj_d.length; (_pj_f < _pj_e); _pj_f += 1) {
+                    hardreq = _pj_d[_pj_f];
+                    hard_required_index = Number.parseInt(this._lib.re_sub("^Ohardreq:", "", hardreq));
+                    if ((hard_required_index === gated_objective_index)) {
+                        bad_gated_conditions = true;
+                        this._lib.push(log, ["error", `Cannot have objective #${hard_required_index} be both gated AND hard required.`]);
+                        break;
+                    }
+                }
+                if (bad_gated_conditions) {
+                    break;
+                }
             }
             win_flags = flagset.get_list("^Owin:");
             if ((flagset.has("Omode:classicforge") && (! flagset.has("Owin:crystal")))) {
@@ -574,12 +717,178 @@ class FlagLogicCore {
                     this._lib.push(log, ["error", "Character objectives are set while no character slots will be filled"]);
                 }
             }
-            if (((flagset.has("Orandom:char") && flagset.has("Cnoearned")) && flagset.has("Cnofree"))) {
-                flagset.unset("Orandom:char");
-                this._lib.push(log, ["correction", "Random character objectives in the pool while no character slots will be filled. Removed Orandom:char."]);
+            for (var random_prefix, _pj_c = 0, _pj_a = ["Orandom:char", "Orandom2:char", "Orandom3:char"], _pj_b = _pj_a.length; (_pj_c < _pj_b); _pj_c += 1) {
+                random_prefix = _pj_a[_pj_c];
+                if (((((flagset.has(random_prefix) && flagset.has("Cnoearned")) && flagset.has("Cnofree")) && (! flagset.has("Ctreasure:free"))) && (! flagset.has("Ctreasure:earned")))) {
+                    flagset.unset(random_prefix);
+                    this._lib.push(log, ["correction", `Random character objectives in the pool while no character slots will be filled. Removed ${random_prefix}.`]);
+                }
             }
-            if ((! flagset.get_list("^Orandom:\\d"))) {
-                this._simple_disable_regex(flagset, log, "No random objectives specified", "^Orandom:[^\\d]");
+            for (var random_prefix, _pj_c = 0, _pj_a = ["Orandom:", "Orandom2:", "Orandom3:"], _pj_b = _pj_a.length; (_pj_c < _pj_b); _pj_c += 1) {
+                random_prefix = _pj_a[_pj_c];
+                if ((! flagset.get_list(`^${random_prefix}\d`))) {
+                    this._simple_disable_regex(flagset, log, `No random objectives specified for pool ${random_prefix}`, `^${random_prefix}[^\d]`);
+                }
+            }
+            total_potential_bosses = 0;
+            total_objective_count = 0;
+            for (var random_prefix, _pj_c = 0, _pj_a = ["Orandom:", "Orandom2:", "Orandom3:"], _pj_b = _pj_a.length; (_pj_c < _pj_b); _pj_c += 1) {
+                random_prefix = _pj_a[_pj_c];
+                if ((! flagset.get_list(`^${random_prefix}`))) {
+                    continue;
+                }
+                all_customized_random_flags = flagset.get_list(`^${random_prefix}[^\d]`);
+                num_random_objectives = flagset.get_list(`^${random_prefix}\d`);
+                if ((num_random_objectives.length === 0)) {
+                    continue;
+                }
+                flag_suffix = this._lib.re_sub(`^${random_prefix}`, "", num_random_objectives[0]);
+                if (((all_customized_random_flags.length === 0) || _pj.in_es6(`${random_prefix}boss`, all_customized_random_flags))) {
+                    total_potential_bosses += Number.parseInt(flag_suffix);
+                }
+                total_objective_count += Number.parseInt(flag_suffix);
+            }
+            specific_boss_objectives = flagset.get_list(`^O[\d]:boss_`);
+            all_specific_objectives = flagset.get_list(`^O[\d]:`);
+            total_potential_bosses += specific_boss_objectives.length;
+            total_objective_count += all_specific_objectives.length;
+            if (flagset.has("Omode:fiends")) {
+                total_potential_bosses += 6;
+                total_objective_count += 6;
+            }
+            if (flagset.has("Omode:classicforge")) {
+                total_objective_count += 1;
+            }
+            if (flagset.has("Omode:classicgiant")) {
+                total_objective_count += 1;
+            }
+            if ((flagset.get_list("^Omode:dkmatter").length > 0)) {
+                total_objective_count += 1;
+            }
+            if ((total_potential_bosses > 34)) {
+                this._lib.push(log, ["error", "More than 34 potential bosses specified"]);
+            }
+            if ((total_objective_count > 32)) {
+                this._lib.push(log, ["error", "More than 32 objectives specified"]);
+            }
+            duplicate_check_count = 0;
+            character_pool = [];
+            for (var random_prefix, _pj_c = 0, _pj_a = ["Orandom:", "Orandom2:", "Orandom3:"], _pj_b = _pj_a.length; (_pj_c < _pj_b); _pj_c += 1) {
+                random_prefix = _pj_a[_pj_c];
+                if ((flagset.get_list(`^${random_prefix}`).length === 0)) {
+                    continue;
+                }
+                random_only_char_flags = flagset.get_list(`${random_prefix}only`);
+                if (((! flagset.has(`${random_prefix}char`)) && (random_only_char_flags.length > 0))) {
+                    flagset.set(`${random_prefix}char`);
+                    this._lib.push(log, ["correction", `Random objectives requiring specific characters set without Orandom:char; setting ${random_prefix}char`]);
+                }
+                all_customized_random_flags = flagset.get_list(`^${random_prefix}[^\d]`);
+                if (((all_customized_random_flags.length !== 0) && (! _pj.in_es6(`${random_prefix}char`, all_customized_random_flags)))) {
+                    continue;
+                }
+                all_random_flags = flagset.get_list(`^${random_prefix}`);
+                skip_pools = false;
+                for (var random_flag, _pj_f = 0, _pj_d = all_random_flags, _pj_e = _pj_d.length; (_pj_f < _pj_e); _pj_f += 1) {
+                    random_flag = _pj_d[_pj_f];
+                    flag_suffix = this._lib.re_sub(`^${random_prefix}`, "", random_flag);
+                    if (this._lib.re_test("\\d", flag_suffix)) {
+                        required_objective_count = Number.parseInt(flag_suffix);
+                    } else {
+                        if (((! this._lib.re_test("only", flag_suffix)) && (! this._lib.re_test("char", flag_suffix)))) {
+                            skip_pools = true;
+                            break;
+                        }
+                    }
+                }
+                duplicate_char_count = 0;
+                desired_char_count = 0;
+                if (((random_only_char_flags.length > 0) && (random_only_char_flags.length < required_objective_count))) {
+                    this._lib.push(log, ["error", `Random objectives requiring less specific characters (${random_only_char_flags.length}) than number of objectives (${required_objective_count})`]);
+                    break;
+                } else {
+                    if ((random_only_char_flags.length > 0)) {
+                        for (var random_flag, _pj_f = 0, _pj_d = random_only_char_flags, _pj_e = _pj_d.length; (_pj_f < _pj_e); _pj_f += 1) {
+                            random_flag = _pj_d[_pj_f];
+                            desired_char_count += 1;
+                            current_char = random_flag.slice(`${random_prefix}only`.length);
+                            if ((! _pj.in_es6(current_char, character_pool))) {
+                                this._lib.push(character_pool, current_char);
+                            } else {
+                                duplicate_char_count += 1;
+                            }
+                        }
+                    } else {
+                        all_character_pool = ["cecil", "kain", "rydia", "edward", "tellah", "rosa", "yang", "palom", "porom", "cid", "edge", "fusoya"];
+                        desired_char_count = all_character_pool.length;
+                        for (var current_char, _pj_f = 0, _pj_d = all_character_pool, _pj_e = _pj_d.length; (_pj_f < _pj_e); _pj_f += 1) {
+                            current_char = _pj_d[_pj_f];
+                            if ((! _pj.in_es6(current_char, character_pool))) {
+                                this._lib.push(character_pool, current_char);
+                            } else {
+                                duplicate_char_count += 1;
+                            }
+                        }
+                    }
+                }
+                chars_to_remove = duplicate_check_count;
+                if ((duplicate_char_count < duplicate_check_count)) {
+                    chars_to_remove = duplicate_char_count;
+                }
+                actual_available_characters = (desired_char_count - chars_to_remove);
+                if (((actual_available_characters < required_objective_count) && (skip_pools === false))) {
+                    this._lib.push(log, ["error", (`Not enough unique characters for pool ${random_prefix}.  Another pool could potentially consume some or all of these characters ${random_only_char_flags}` + ",".join(flagset.get_list(`^${random_prefix}`)))]);
+                    break;
+                }
+                duplicate_check_count += required_objective_count;
+            }
+        }
+        challenges = flagset.get_list("^-wacky:");
+        if (challenges) {
+            WACKY_SET_1 = ["afflicted", "menarepigs", "mirrormirror", "skywarriors", "zombies"];
+            WACKY_SET_2 = ["battlescars", "payablegolbez", "tellahmaneuver", "worthfighting"];
+            WACKY_SET_3 = [["3point", "afflicted", "battlescars", "menarepigs", "mirrormirror", "skywarriors", "unstackable", "zombies"], ["afflicted", "friendlyfire"], ["battlescars", "afflicted", "zombies", "worthfighting"], ["darts", "musical"], ["3point", "tellahmaneuver"]];
+            for (var c, _pj_c = 0, _pj_a = challenges, _pj_b = _pj_a.length; (_pj_c < _pj_b); _pj_c += 1) {
+                c = _pj_a[_pj_c];
+                mode = this._lib.re_sub("-wacky:", "", c);
+                if (_pj.in_es6(mode, WACKY_SET_1)) {
+                    this._simple_disable(flagset, log, "Can only have one enforced status wacky mode", function () {
+    var _pj_d = [], _pj_e = WACKY_SET_1;
+    for (var _pj_f = 0, _pj_g = _pj_e.length; (_pj_f < _pj_g); _pj_f += 1) {
+        var m = _pj_e[_pj_f];
+        if ((m !== mode)) {
+            _pj_d.push(`-wacky:${m}`);
+        }
+    }
+    return _pj_d;
+}
+.call(this));
+                    this._simple_disable(flagset, log, "Modes are incompatible with enforced status wacky modes", function () {
+    var _pj_d = [], _pj_e = WACKY_SET_2;
+    for (var _pj_f = 0, _pj_g = _pj_e.length; (_pj_f < _pj_g); _pj_f += 1) {
+        var m = _pj_e[_pj_f];
+        _pj_d.push(`-wacky:${m}`);
+    }
+    return _pj_d;
+}
+.call(this));
+                }
+                for (var group, _pj_f = 0, _pj_d = WACKY_SET_3, _pj_e = _pj_d.length; (_pj_f < _pj_e); _pj_f += 1) {
+                    group = _pj_d[_pj_f];
+                    if (_pj.in_es6(mode, group)) {
+                        this._simple_disable(flagset, log, `Wacky modes are incompatible with ${mode}`, function () {
+    var _pj_g = [], _pj_h = group;
+    for (var _pj_i = 0, _pj_j = _pj_h.length; (_pj_i < _pj_j); _pj_i += 1) {
+        var m = _pj_h[_pj_i];
+        if ((m !== mode)) {
+            _pj_g.push(`-wacky:${m}`);
+        }
+    }
+    return _pj_g;
+}
+.call(this));
+                    }
+                }
             }
         }
         return log;
