@@ -1256,7 +1256,7 @@ def apply(env, randomize_scope, randomize_type, testing=False):
         else:
             other_entrances.append(i)
 
-    print("\n".join(["", "", "", ] + towns_map + ["", "", "", ] + other_entrances))
+    # print("\n".join(["", "", "", ] + towns_map + ["", "", "", ] + other_entrances))
     env.spoilers.add_table("Entrance Randomization\nLocation X is in Entrance Y", sorted(spoil_entrances_for_spoiler),
                            public=env.options.flags.has_any('-spoil:all', '-spoil:misc'), ditto_depth=1)
 
