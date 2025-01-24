@@ -23,6 +23,7 @@ class RewardSlot(enum.IntEnum):
     cave_eblan_character        = 0x12
     lunar_palace_character      = 0x13
     giant_character             = 0x14
+
     starting_item               = 0x20
     antlion_item                = 0x21
     fabul_item                  = 0x22
@@ -85,6 +86,8 @@ class RewardSlot(enum.IntEnum):
     forge_item                  = 0x5B
     pink_trade_item             = 0x5C
     fixed_crystal               = 0x5D
+    gated_objective             = 0x5E
+    dwarf_hospital_item         = 0x5F
 
     MAX_COUNT = 0x60
 
@@ -191,6 +194,8 @@ REWARD_SLOT_SPOILER_NAMES = {
     RewardSlot.forge_item                  : "Kokkol forged item",
     RewardSlot.pink_trade_item             : "Pink Tail trade item",
     RewardSlot.fixed_crystal               : "Objective completion", 
+    RewardSlot.gated_objective             : "Gated requirements completion", 
+    RewardSlot.dwarf_hospital_item         : "Dwarf Castle hospital item",
 }
 
 class Reward:
@@ -255,6 +260,35 @@ class AxtorReward(Reward):
     def __str__(self):
         return str(self.axtor)
 
+class AxtorChestReward(Reward):
+    def __init__(self, item, key_item=False):
+        self.item = item
+        self.is_key = key_item
+        if self.item != None and '#item.fe_CharacterChestItem' in self.item:
+            self.reward_index = self.item[-2:]
+            self.item = '#item.Cure1'
+        else:
+            self.reward_index = 0
+        super().__init__(item, (0x02 if key_item else 0x00))
+
+    def __eq__(self, other):
+        if type(other) in (int, str):
+            return self.item == other
+        else:
+            return super().__eq__(other)
+
+    __hash__ = Reward.__hash__
+
+    def __str__(self):
+        return ('*' if self.is_key else '') + '[' + str(self.item) + ']'
+
+    def encode(self):        
+        encoding = super().encode()
+        if type(self.item) is str:
+            return [databases.get_items_dbview().find_one(lambda it: it.const == self.item).code, encoding[1]]
+        else:
+            return encoding
+
 class RewardsAssignment:
     def __init__(self):
         self._assignment = {}
@@ -293,6 +327,7 @@ class RewardsAssignment:
 
             if has_slot:
                 encoded = self._assignment[slot].encode()
+                #print(f'Generating table for slot {slot} {encoded}')
                 for b in encoded:
                     if type(b) is int:
                         output.append(b)

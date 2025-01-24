@@ -500,6 +500,35 @@ msfpatch {
 
         // load XP value from table and add to total
         clc
+        // %if experience_geometric%
+        // load the base experience and set the Y register equal to the current number of monsters left to handle
+        lda $21f500,x
+        sta $393d
+        lda $21f501,x
+        sta $393e
+        lda $21f502,x
+        sta $df
+        ldy #$0000
+        lda $b1
+        tay
+        jsr $_BattleGeometric__Mod
+
+        // now that we've scaled the exp, time to add it in
+        lda $393d
+        adc $3591
+        sta $3591
+        lda $393e
+        adc $3592
+        sta $3592
+        lda $df
+        adc $3593
+        sta $3593
+
+        plx
+        jml $03ecb7
+        // %end%
+
+        // %if ~experience_geometric%
         lda $21f500,x
         adc $3591
         sta $3591
@@ -513,17 +542,93 @@ msfpatch {
         // return to original code after XP lookup/addition
         plx
         jml $03ecb7
-
+        // %end%
 
     BreakXPLimit__NormalCase:
+        // %if experience_geometric%
+        lda $0ea1c0,x
+        sta $393d
+        lda $0ea1c1,x
+        sta $393e
+        stz $df
+        ldy #$0000
+        lda $b1
+        tay
+        phx
+        jsr $_BattleGeometric__Mod
+
+        // add in the scaled exp
+        lda $393d
+        adc $3591
+        sta $3591
+        lda $393e
+        adc $3592
+        sta $3592
+        lda $df
+        adc $3593
+        sta $3593
+
+        plx
+        jml $03ecb7
+        // %end%
+
+        // %if ~experience_geometric%
         // perform displaced instruction and
         // return to original code
         clc
         lda $0ea1c0,x
         jml $03ec9f
+        // %end%
 
 }
 
+msfpatch {
+    // multiplies a 3-byte integer in $393d,$393e,$df by a flag-dependent 
+    // parameter and divides by 10, a number of times depending on the value 
+    // in the Y register (Y-1 times). 
+    // the result is in $393d,#393e,$df
+    // parameter options are integers from 0 to 9, because scaling up makes things obnoxious
+    BattleGeometric__Mod:
+    %LoopStart:
+        cpy #$0002
+        bcc $+DoneMultiplying
+        // %experience geometric numerator%
+        lda #$09
+        // %end%
+        sta $e1
+        sta $393f
+        stz $3940
+        jsr $_Util__BattleMultiply3941
+        jsr $_Util__BattleMultiplyE3
+        // the result of multiplying a 20-bit number by less than 16 is at most 24-bit
+        lda $e3
+        adc $3943
+        sta $3943
+
+        // set up division by 10 using Util__Divide
+        sta $_Util__Divide_Dividend2
+        lda $3942
+        sta $_Util__Divide_Dividend1
+        lda $3941
+        sta $_Util__Divide_Dividend0
+        lda #$0a
+        sta $_Util__Divide_Divisor0
+        stz $_Util__Divide_Divisor1
+        jsr $_Util__Divide
+
+        // put result back where it started in order to repeat
+        lda $_Util__Divide_Quotient0
+        sta $393d
+        lda $_Util__Divide_Quotient1
+        sta $393e
+        lda $_Util__Divide_Quotient2
+        sta $df
+
+        dey
+        bra $-LoopStart
+    % DoneMultiplying:
+        rts
+}
 
 
 //------------------------------------------------------------------

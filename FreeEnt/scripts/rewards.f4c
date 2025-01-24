@@ -90,12 +90,13 @@ consts(reward_slot)
     $5B     forge_item
     $5C     pink_trade_item
     $5D     fixed_crystal
-
+    $5E     gated_objective
+    $5F     dwarf_hospital_item
     // current maximum: 0x60 reward slots
 }
 
 msfpatch {
-    .def  Rewards__MaxSlotCount  $60
+    .def  Rewards__MaxSlotCount  $70    
 }
 
 msfpatch {
@@ -198,11 +199,23 @@ msfpatch {
         "Objective completion            "   // $5D     fixed_crystal
 }
 
+text(bank 1 message $133) {
+The earth crystal weakens
+your super powers!
+}
+
 msfpatch {
     .def Rewards__CurrentSlot     $7e1621
     .def Rewards__CurrentValueLo  $7e1622
     .def Rewards__CurrentValueHi  $7e1623
     .def Rewards__PendingDeliverySlot  $7e1626
+    .def Rewards__DeliveredItemCount  $7e162b
+    .def Rewards__PendingCharacterDeliverySlot  $7e162d
+    // KI Experience
+    .def Rewards__KeyItemChecksCount  $7e1630
+
+    // KI Objective
+    .def Rewards__TriggerDeliveryEvent $7e1632
 
     // sub: given reward code A, return in
     //   X the reward code
@@ -236,11 +249,10 @@ msfpatch {
 msfpatch {
     // A = reward slot
     Rewards__DeliverFromSlot:
-        sta $_Rewards__CurrentSlot
+        sta $_Rewards__CurrentSlot        
 
         ldx #$_Tracker__RewardSlotFlags
         jsl $=Tracker__SetBit
-
         lda $_Rewards__CurrentSlot
         jsl $=Rewards__GetFromSlot
         stx $_Rewards__CurrentValueLo
@@ -254,12 +266,35 @@ msfpatch {
         jmp $_EvEx__End
 
     %DeliverItem:
+        lda $=Rewards__DeliveredItemCount
+        inc a
+        sta $=Rewards__DeliveredItemCount
+        // for exp flag purposes, possibly increment a checks counter
+        // to transfer A to X, need to ensure the upper byte of A is #$00
+        lda #$00
+        xba
+        lda $_Rewards__CurrentSlot
+        tax
+        lda $=PossibleKeyItemRewardSlots,x
+        beq $+NotKeyCheck
+        inc $_Rewards__KeyItemChecksCount
+
+    %NotKeyCheck:
         lda $_Rewards__CurrentValueHi
         beq $+DeliverNormalItem
 
         // this is a key item, execute required additional steps:
         // set corresponding plot flags
         jsl $=Rewards__DeliverKeyItemSideEffects
+//%if ki_objective_crystal%
+        lda $_Rewards__CurrentValueLo
+	cmp #$c8 //#item.Crystal
+	beq $+DeliverNormalItem // don't recurse when getting the crystal
+	                        // from Omode:ki in case this hangs
+//%end%
+//%if ki_objective%
+        jsl $=EvEx__ObjectivesImpl_DoEvent
+//%end%
 
     %DeliverNormalItem:
         // get item code back and do "give item" handler
@@ -317,14 +352,55 @@ msfpatch {
         ldx #$_Tracker__KeyItemFoundFlags
         jsl $=Tracker__SetBit
         lda $_Rewards__CurrentValueLo
-        cmp #$3e // check if spoon
-        bne $+ItemNotYetUsed
+        // %flag superhero_challenge on%
+        // Earth crystal depowers superhero
+        cmp #$f1        
+        beq $+RemoveSuperhero
+        // %end%
+    %SkipSuperHeroCheck:
+        cmp #$3e // check if spoon        
+        bne $+ItemNotYetUsed        
         // for items like spoon, mark as already "used"
         lda $1680
         ldx #$_Tracker__KeyItemUsedFlags
         jsl $=Tracker__SetBit
-    %ItemNotYetUsed:
-    
+        bra $+ItemNotYetUsed
+    %RemoveSuperhero:       
+        lda $06C6   // Check if it's a fight chest and skip the dialog message if so
+        bne $+StartSuperheroLoop
+        // Show depower message
+        lda #$33 // refers to $120 since this is the behavior for a bank 1 message 
+        sta $b2
+        ldx #$b1e1
+        jsl $=Bank00LongCallX
+        ldx #$b0d1
+        jsl $=Bank00LongCallX
+        ldx #$b164
+        jsl $=Bank00LongCallX        
+    %StartSuperheroLoop:        
+        ldx #$0000
+    %RemoveSuperheroLoop:  
+        lda $100f,x
+        sec
+        sbc #$32
+        sta $100f,x
+        inx
+        cpx #$000a
+        bcc $+RemoveSuperheroLoop
+    %ItemNotYetUsed:   
+    // %if ki_objective%
+        lda $_Stats_KeyItems
+    // %end%
+    // %completed ki objective check%
+    // %end%
+    // %if ki_objective%
+        bne $+ObjectiveNotYetMet
+
+        lda #$6A
+        jsl $=Objectives__StageProgress
+
+    %ObjectiveNotYetMet:
+    // %end% 
         lda $1680
         asl a
         tax
@@ -332,10 +408,13 @@ msfpatch {
         sta $=Tracker__KeyItemLocations,x
         inx
         lda #$00
-        sta $=Tracker__KeyItemLocations,x
+        sta $=Tracker__KeyItemLocations,x       
 
-        rtl
+        rtl   
+        
 }
+
+
 
 msfpatch {
     // params: A = reward slot, X = target text buffer
@@ -423,6 +502,15 @@ msfpatch {
         lda $08
         jsl $=Rewards__DeliverFromSlot
 
+//%if ki_objective%
+        ldx #$6dff  // end event on return
+        stx $1615   // [hardcoded]
+	lda #$.Objectives__ProcessEventID
+        ldx #$df63
+        stx $_Bank00LongCallAddr
+        jsl $=Bank00LongCall
+//%end%
+
         jml $009794
 }
 
@@ -444,6 +532,19 @@ msfpatch {
     Rewards__MIABContents:
         // A contains reward slot
         sta $_Rewards__CurrentSlot
+        // %if experience_kicheck_bonus%
+        // to transfer A to X, need to ensure the upper byte of A is #$00
+        xba
+        lda #$00
+        xba
+        tax
+        lda $=PossibleKeyItemRewardSlots,x
+        beq $+NotKeyMIAB
+        inc $_Rewards__KeyItemChecksCount
+
+    %NotKeyMIAB:
+        lda $_Rewards__CurrentSlot
+        // %end%
         jsl $=Rewards__GetFromSlot
         stx $_Rewards__CurrentValueLo
 
@@ -456,12 +557,21 @@ msfpatch {
         stz $180a
         stz $180b
 
+        jsl $=TreasureCharacter_IsCharReward
+        bne $+TreasureCharacter
+
+    %CheckItem:
         lda $_Rewards__CurrentValueHi
         cmp #$04
         bcs $+ExternalReward
 
         and #$02
         beq $+IsRegularItem
+
+//%if ki_objective%
+	lda #$ff
+	sta $_Rewards__TriggerDeliveryEvent
+//%end%
 
         lda $_Rewards__CurrentValueLo
         cmp #$fc // hook
@@ -492,6 +602,9 @@ msfpatch {
         sta $_Rewards__PendingDeliverySlot
         stz $c6
 
+        rtl
+
+    %TreasureCharacter:
         rtl
 }
 
