@@ -24,6 +24,19 @@
     "href": "https://EXTERNAL-LINK-TO-PRESETS-JSON"
   },
   {
+    "header": "Fork Specific"
+  },
+  {
+    "category": "Doors Rando",
+    "presets": [
+        {
+            "name": "Doorway To Tomorrow",
+            "description": "The flagset used for the Doorway to Tomorrow side tournament",
+            "flags": "Omode:ki11/req:all/win:crystal Kmain/summon/moon/miab:above,below Pshop Cstandard/nofree/start:not_tellah/j:abilities/thrift:4/hero Tstandard Swildish/no:sirens Bstandard/alt:gauntlet/whichburn/whichbez Etoggle Glife/sylph/backrow -kit:basic -kit2:freedom -kit3:exit -noadamants -spoon -exp:nokeybonus,kicheckbonus5,maxlevelbonus -doorsrando:all"
+        }
+    ]
+  },
+  {
     "header": "Past Events"
   },
   {
