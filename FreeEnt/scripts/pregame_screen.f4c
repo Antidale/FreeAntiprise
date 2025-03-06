@@ -1043,6 +1043,15 @@ msfpatch {
         // load character palette
         jsr $_GetSelectedCharacterJob
 
+        // %flag characters_cecil_paladin on%
+        // make sure we load Paladin Cecil's palette,
+        // not DKC's, because Cpaladin is on
+        cmp #$00
+        bne $+GotCharJob
+        lda #$09
+    %GotCharJob:
+        // %end%
+
         // get job number * 0x20
         sta $1682
         stz $1681
@@ -1092,6 +1101,15 @@ msfpatch {
         jsr $_MK_VBlank
         // Hijack portrait CHR loading code
         jsr $_GetSelectedCharacterJob
+        // %flag characters_cecil_paladin on%
+        // make sure we load Paladin Cecil's palette,
+        // not DKC's, because Cpaladin is on
+        cmp #$00
+        bne $+GotPortraitJob
+        lda #$09
+    %GotPortraitJob:
+        // %end%
+
         sta $1680 // remember for copying palette
         sta $1bc0
         stz $1bbf
