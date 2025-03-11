@@ -41,6 +41,10 @@ event($10)  //Opening events
     [#B #Rando_PaladinizeCecil]    
     // %end%
 
+    // %quickstart superhero%
+    [#B #MakeSuperhero]
+    // %end%
+
     // %quickstart%
     [#B #Rando_DeliverRewardFromSlot #reward_slot.starting_partner_character]
     [#B #Rando_DeliverRewardFromSlot #reward_slot.starting_item]

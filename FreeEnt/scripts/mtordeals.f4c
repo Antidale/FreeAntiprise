@@ -335,6 +335,9 @@ event($62)  //Cecil's transformation, Tellah remembering
 
     [#B #Rando_PaladinizeCecil]
 
+    // %cecil superhero ordeals%     
+    // %end%
+
     [#B #If #Flag #flag.Temp] {
         toggle tint $99
 
