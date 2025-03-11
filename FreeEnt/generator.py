@@ -910,6 +910,7 @@ def build(romfile, options, force_recompile=False):
 
     if not (options.quickstart or options.test_settings.get('quickstart', False)):
         env.add_substitution('quickstart', '')
+        env.add_substitution('quickstart superhero', '')
     elif not env.options.flags.has('superhero_challenge'):
         env.add_substitution('quickstart superhero', '')
 
