@@ -495,7 +495,7 @@ def apply(env):
         if maybe_spells:
             for spell in ALL_SPELLS_BY_LOCATION_TIERING:
                 if env.rnd.random() < MAYBE_THRESHOLD:
-                    available_spells.pop(spell)
+                    available_spells.pop(spell, None)
         
         shuffled_spells = [spell for spell in available_spells]
         env.rnd.shuffle(shuffled_spells)
