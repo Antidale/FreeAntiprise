@@ -910,6 +910,9 @@ def build(romfile, options, force_recompile=False):
 
     if not (options.quickstart or options.test_settings.get('quickstart', False)):
         env.add_substitution('quickstart', '')
+        env.add_substitution('quickstart superhero', '')
+    elif not env.options.flags.has('superhero_challenge'):
+        env.add_substitution('quickstart superhero', '')
 
     scripts = []
     script_preprocessor = ScriptPreprocessor(env)
@@ -921,8 +924,12 @@ def build(romfile, options, force_recompile=False):
             scripts.append(script_preprocessor.preprocess(infile.read()))
 
     for addr in BINARY_PATCHES:
-        with open(os.path.join(os.path.dirname(__file__), BINARY_PATCHES[addr]), 'rb') as infile:
-            data = infile.read()
+        if addr == 0x117000 and env.options.flags.has('characters_cecil_paladin'):
+            with open(os.path.join(os.path.dirname(__file__), 'binary_patches/standing_characters_paladin.bin'), 'rb') as infile:
+                data = infile.read()            
+        else:
+            with open(os.path.join(os.path.dirname(__file__), BINARY_PATCHES[addr]), 'rb') as infile:
+                data = infile.read()
         env.add_binary(UnheaderedAddress(addr), data)
 
     bytes_patches = []

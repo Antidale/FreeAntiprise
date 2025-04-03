@@ -32,7 +32,7 @@ HOOK_UNDERGROUND_BRANCH = ['#item.fe_Hook?', 'kingqueen_slot', 'rubicant_slot', 
 
 STARTING_ITEM_MAP = {
     'Kstart:package'                        : '#item.Package',
-    'Kstart:sandruby'                       : '#item.Sandruby',
+    'Kstart:sandruby'                       : '#item.SandRuby',
     'Kstart:baron'                          : '#item.Baron',
     'Kstart:twinharp'                       : '#item.TwinHarp',
     'Kstart:earthcrystal'                   : '#item.EarthCrystal',

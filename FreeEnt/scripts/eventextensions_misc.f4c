@@ -838,14 +838,27 @@ msfpatch {
 msfpatch {
     EvEX__MakeSuperhero:
         ldx #$0000
+        ldy #$0000
+    %CheckSuperheroLoop:
+        lda $1000,x
+        and #$1f
+        cmp #$01
+        bne $+CheckNext
     %MakeSuperheroLoop:        
         lda $100f,x
+        clc
         adc #$32
         sta $100f,x
         inx
-        cpx #$000a
-        bcc $+MakeSuperheroLoop
+        iny
+        cpy #$000a
+        bcc $-MakeSuperheroLoop
         jmp $_EvEx__End
+    %CheckNext:
+        jsr $_Util__XPlus40
+        // The superhero does not leave the party,
+        // so save bytes by omitting a safety exit.
+        bra $-CheckSuperheroLoop
 }
 
 msfpatch

@@ -352,6 +352,7 @@ msfpatch {
         ldx #$_Tracker__KeyItemFoundFlags
         jsl $=Tracker__SetBit
         lda $_Rewards__CurrentValueLo
+
         // %flag superhero_challenge on%
         // Earth crystal depowers superhero
         cmp #$f1        
@@ -365,6 +366,8 @@ msfpatch {
         ldx #$_Tracker__KeyItemUsedFlags
         jsl $=Tracker__SetBit
         bra $+ItemNotYetUsed
+        
+        // %flag superhero_challenge on%
     %RemoveSuperhero:       
         lda $06C6   // Check if it's a fight chest and skip the dialog message if so
         bne $+StartSuperheroLoop
@@ -379,14 +382,29 @@ msfpatch {
         jsl $=Bank00LongCallX        
     %StartSuperheroLoop:        
         ldx #$0000
+        ldy #$0000
+    %CheckSuperheroLoop:
+        lda $1000,x
+        and #$1f
+        cmp #$01
+        bne $+CheckNext
     %RemoveSuperheroLoop:  
         lda $100f,x
         sec
         sbc #$32
         sta $100f,x
         inx
-        cpx #$000a
-        bcc $+RemoveSuperheroLoop
+        iny
+        cpy #$000a
+        bcc $-RemoveSuperheroLoop
+        bra $+ItemNotYetUsed
+    %CheckNext:
+        jsr $_Util__XPlus40
+        // The superhero does not leave the party,
+        // so save bytes by omitting a safety exit.
+        bra $-CheckSuperheroLoop
+        // %end%
+
     %ItemNotYetUsed:   
     // %if ki_objective%
         lda $_Stats_KeyItems

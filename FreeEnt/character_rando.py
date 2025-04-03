@@ -643,6 +643,15 @@ def apply(env):
     if env.options.flags.has('hero_challenge') or env.options.flags.has('superhero_challenge'):
         env.add_file('scripts/hero_exp.f4c')
 
+    # special case handling if Cecil is the starting character
+    if env.meta['starting_character'] == 'cecil':
+        if env.options.flags.has('characters_cecil_paladin'):
+            env.add_file('scripts/paladin_start_sprite.f4c')
+        elif env.options.flags.has('superhero_challenge'):
+            # if Cecil changes job and is the superhero, then he needs to potentially be re-superheroed.
+            env.add_substitution('cecil superhero ordeals', '    [#B #If #not_Item #item.EarthCrystal] {\n' +
+                                                            '        [#B #MakeSuperhero]\n' +
+                                                            '    }\n')
 
 
 CHARACTER_AS_ENEMY_NAMES = {
