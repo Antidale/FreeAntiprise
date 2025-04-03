@@ -76,7 +76,7 @@ class TreasureAssignment:
         if remap and slug in self._remaps:
             slug = self._remaps[slug]
 
-        if contents in self._autosells and fight is None:
+        if contents in self._autosells and fight is None and '#item.fe_CharacterChestItem' not in contents:
             contents = '{} gp'.format(self._autosells[contents])        
             
         reward_index = -1        
