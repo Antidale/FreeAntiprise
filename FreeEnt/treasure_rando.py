@@ -93,7 +93,7 @@ class TreasureAssignment:
             contents = '{} gp'.format(self._autosells[contents])        
             
         character_reward_slot_index = -1   
-        character_reward_treasure_index = -1      
+        character_reward_treasure_index = t.index    
         #translate either a reward slot or item into a reward index
         if contents != None and contents.startswith('#reward_slot.'):            
             slot = rewards.RewardSlot[contents[len('#reward_slot.'):]]
