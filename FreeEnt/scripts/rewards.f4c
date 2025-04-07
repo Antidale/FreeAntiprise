@@ -288,16 +288,16 @@ msfpatch {
         jsl $=Rewards__DeliverKeyItemSideEffects
 //%if ki_objective_crystal%
     lda $_Rewards__CurrentValueLo
-	cmp #$c8 //#item.Crystal
-	beq $+DeliverNormalItem // don't recurse when getting the crystal
-	                        // from Omode:ki in case this hangs    
+    cmp #$c8 //#item.Crystal
+    beq $+DeliverNormalItem // don't recurse when getting the crystal
+                            // from Omode:ki in case this hangs    
     
     lda $_Rewards__CurrentValueLo
     sta $_Rewards__PendingDeliverySlot
     lda #$5E    // Check if this item was the one delivered from the gated objective
     jsl $=Rewards__GetFromSlot
     txa
-	cmp $_Rewards__PendingDeliverySlot
+    cmp $_Rewards__PendingDeliverySlot
     beq $+DeliverNormalItem
 //%end%
 //%if ki_objective%
