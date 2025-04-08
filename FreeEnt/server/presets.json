@@ -68,7 +68,7 @@
             "name": "To Dart a Bard",
             "description": "",
             "flags": "Orandom:3,quest/random2:3,tough_quest/random3:3,boss/req:6/win:crystal Kmain/moon/miab:above/nofree:dwarf/start:adamant Pkey Cstandard/nofree/start:edge/only:edward/thrift:5/j:abilities Twildish/mintier:2/money Sprice:200/standard/sell:quarter/no:vampires,bacchus,damage_items,coffin Bstandard/alt:gauntlet/whichburn/whichbez Etoggle Gdupe/life -spoon -smith:super,playable -wacky:darts -tweak:edwardheal"
-        },      
+        }
     ]
   },
   {
