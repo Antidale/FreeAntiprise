@@ -1,9 +1,10 @@
 import multiprocessing
+import os
 
 class Config:
     def __init__(self, args):
         self.args = args
-        self.db_url = "mongodb://127.0.0.1:27017"
+        self.db_url = os.environ.get("MONGO_URL") or "mongodb://127.0.0.1:27017"
         self.db_name = ('ff4fe-beta' if args.beta else 'ff4fe')
 
 def run_generator(config, task_queue, start_event):
