@@ -8,3 +8,6 @@ FreeEnt/server/__pycache__/*
 FreeEnt/server/bin/*
 FreeEnt/server/_build/
 .DS_Store
+flips-linux
+start-site
+StartSite.ps1
