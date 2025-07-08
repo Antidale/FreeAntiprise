@@ -461,6 +461,15 @@ def run(config, task_queue):
             'show_tracebacks' : False
             })
 
+    is_docker = False
+    try:
+        is_docker = os.environ['DOCKER']
+    except Exception:
+        is_docker = False
+
+    if is_docker:
+        cherrypy.config.update({'server.socket_host':'0.0.0.0'})
+
     db_client = pymongo.MongoClient(config.db_url)
     db = db_client[config.db_name]
 
