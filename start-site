@@ -1,4 +1,0 @@
-#!/bin/sh
-
-source ./ENV/bin/activate
-python -m FreeEnt ./ff4.rom.smc server --local
