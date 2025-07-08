@@ -13,4 +13,5 @@ For the ports, if you want to change what your local machine maps those ports to
 For the files, either change the names of them to those assumed values, or update the relevant steps in the `Dockerfile`.
 
 ## Running things
-a simple `docker compose up` should do all the magic.
+A simple `docker compose up` should do all the magic.
+Once that is done, you can navigate to http://127.0.0.1:8080/make to start generating seeds. GL HF!
