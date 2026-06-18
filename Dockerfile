@@ -18,6 +18,9 @@ RUN pip install --upgrade pip && pip install -r requirements.txt
 # must move/remove this step if we ever want to store this image remotely
 COPY ff4.rom.smc /app/ff4.rom.smc
 
+# Set up fe.pth so the f4c module is findable
+RUN echo "/app" > $(python -c "import site; print(site.getsitepackages()[0])")/fe.pth
+
 # Start the main website work
 FROM base as site
 COPY f4c ./f4c/
@@ -50,7 +53,5 @@ FROM base AS tools
 COPY fetools ./fetools
 COPY f4c ./f4c
 
-# Set up fe.pth so the tools site can find the f4c module
-RUN echo "/app" > $(python -c "import site; print(site.getsitepackages()[0])")/fe.pth
 EXPOSE 8082
 CMD ["python", "./fetools/tool_site.py", "./ff4.rom.smc"]
