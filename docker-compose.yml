@@ -3,7 +3,7 @@ services:
     image: fe
     build:
       context: .
-      target: base
+      target: site
     container_name: fe-site
     environment:
       - MONGO_URL=mongodb://mongodb-fe:27017
@@ -14,18 +14,22 @@ services:
       - "8080:8080"
     volumes:
       - site_data:/fe
-    platform: linux/amd64
 
-  # fe-tools:
-  #   build:
-  #     context: .
-  #     target: tools
-  #   image: fe-tools
-  #   ports:
-  #     - "8082:8082"
+  fe-tools:
+    image: tools
+    container_name: fe-tools
+    environment:
+      - DOCKER=true
+    build:
+      context: .
+      target: tools
+    ports:
+      - "8082:8082"
+    volumes:
+      - tools_data:/tools
 
   mongodb:
-    image: mongodb/mongodb-community-server:8.0-ubi8
+    image: mongo:7.0
     container_name: mongodb-fe
     restart: on-failure
     ports:
@@ -36,3 +40,4 @@ services:
 volumes:
   site_data:
   mongo_data:
+  tools_data:
