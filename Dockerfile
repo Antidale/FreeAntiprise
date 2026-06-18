@@ -31,7 +31,7 @@ COPY .env .
 RUN wget -q https://github.com/Alcaro/Flips/archive/refs/heads/master.tar.gz -O flips.tar.gz && \
     tar xf flips.tar.gz && \
     cd Flips-master && \
-    TARGET=cli make && \
+    TARGET=cli ./make-linux.sh && \
     mkdir -p /app/FreeEnt/server/bin && \
     cp flips /app/FreeEnt/server/bin/flips-linux && \
     chmod +x /app/FreeEnt/server/bin/flips-linux && \
