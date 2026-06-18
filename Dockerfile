@@ -1,28 +1,52 @@
-FROM python:3.10 AS base
+FROM python:3.10-slim as base
 
-WORKDIR /fe
+WORKDIR /app
+
+# System deps for compiling Floating IPS
+RUN apt-get update && apt-get install -y \
+    gcc \
+    g++ \
+    make \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Copy local source (ie: whatever branch you have synched locally)
 COPY requirements.txt .
-## this might still be needed for the tools site, so leaving it in
-# COPY docker_fe.pth ENV/lib/python3.11/site-packages/fe.pth
-RUN pip install -r requirements.txt
-RUN apt-get update
-RUN apt-get install -y libgtk-3-dev
 
-# change 'ff4.rom.smc' to the rom you're using, updating the path to the file if it is not contained within this folder. do not change /fe/ff4.rom.smc at all, unless you also change the ROMs name/path down below in the CMD at the end of the file.
-COPY ff4.rom.smc /fe/ff4.rom.smc
+# Install Python dependencies
+RUN pip install --upgrade pip && pip install -r requirements.txt
+
+COPY ff4.rom.smc /app/ff4.rom.smc
+
+FROM base as site
 COPY f4c ./f4c/
 COPY FreeEnt ./FreeEnt/
 COPY .env .
 
-# if you haven't already grab the file from: https://github.com/Alcaro/Flips/releases. be sure to rename the `flips` file contained in the `flips-linux.zip` to flips-linux, or just change the copy statement. FE does expect to see `flips-linux` in the `FreeEnt/server/bin` folder, since the container itself is linux
-COPY flips-linux ./FreeEnt/server/bin
-RUN chmod +x FreeEnt/server/bin/flips-linux
+# Build Floating IPS (headless) and place it where FreeEnt expects it
+RUN wget -q https://github.com/Alcaro/Flips/archive/refs/heads/master.tar.gz -O flips.tar.gz && \
+    tar xf flips.tar.gz && \
+    cd Flips-master && \
+    TARGET=cli make && \
+    mkdir -p /app/FreeEnt/server/bin && \
+    cp flips /app/FreeEnt/server/bin/flips-linux && \
+    chmod +x /app/FreeEnt/server/bin/flips-linux && \
+    cd .. && rm -rf Flips-master flips.tar.gz
 
-## Future work to have the docker file build both the main site and the tools site, and in the compose run them both.
-# FROM base AS site
+# Fix CRLF line endings from Windows checkout before running shell scripts
+RUN find /app -name "*.sh" -exec sed -i 's/\r$//' {} +
+
+# Compile the randomizer spec files (required before server can run)
+RUN cd /app/FreeEnt && bash compile_all_specs.sh
+
 EXPOSE 8080
 CMD ["python", "-m", "FreeEnt", "./ff4.rom.smc", "server", "--local"]
 
-# FROM base AS tools
-# EXPOSE 8082
-# CMD ["python", "./fetools/tool_site.py", "./ff4.rom.smc"]
+## Eventually, get the tools site running and accesible as well
+FROM base AS tools
+COPY fetools ./fetools
+COPY f4c ./f4c
+# Set up fe.pth so `python -m FreeEnt` can find the module
+RUN echo "/app" > $(python -c "import site; print(site.getsitepackages()[0])")/fe.pth
+EXPOSE 8082
+CMD ["python", "./fetools/tool_site.py", "./ff4.rom.smc"]
