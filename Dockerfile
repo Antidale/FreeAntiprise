@@ -10,14 +10,15 @@ RUN apt-get update && apt-get install -y \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy local source (ie: whatever branch you have synched locally)
-COPY requirements.txt .
-
 # Install Python dependencies
+COPY requirements.txt .
 RUN pip install --upgrade pip && pip install -r requirements.txt
 
+# copy the rom file to the base image.
+# must move/remove this step if we ever want to store this image remotely
 COPY ff4.rom.smc /app/ff4.rom.smc
 
+# Start the main website work
 FROM base as site
 COPY f4c ./f4c/
 COPY FreeEnt ./FreeEnt/
@@ -40,13 +41,16 @@ RUN find /app -name "*.sh" -exec sed -i 's/\r$//' {} +
 RUN cd /app/FreeEnt && bash compile_all_specs.sh
 
 EXPOSE 8080
-CMD ["python", "-m", "FreeEnt", "./ff4.rom.smc", "server", "--local"]
+CMD ["python", "-m", "FreeEnt", "./ff4.rom.smc", "server"]
+# Use this instead for a better local/debugging experience:
+# CMD ["python", "-m", "FreeEnt", "./ff4.rom.smc", "server", "--local"]
 
-## Eventually, get the tools site running and accesible as well
+## Begin tools site
 FROM base AS tools
 COPY fetools ./fetools
 COPY f4c ./f4c
-# Set up fe.pth so `python -m FreeEnt` can find the module
+
+# Set up fe.pth so the tools site can find the f4c module
 RUN echo "/app" > $(python -c "import site; print(site.getsitepackages()[0])")/fe.pth
 EXPOSE 8082
 CMD ["python", "./fetools/tool_site.py", "./ff4.rom.smc"]

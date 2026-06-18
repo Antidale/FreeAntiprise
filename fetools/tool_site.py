@@ -1,6 +1,5 @@
 import os
 import argparse
-
 import cherrypy
 import jinja2
 import dotenv
